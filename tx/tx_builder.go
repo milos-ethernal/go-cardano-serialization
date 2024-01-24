@@ -21,7 +21,7 @@ func (tb *TxBuilder) Sign(xprv bip32.XPrv) {
 
 // Build creates hash of transaction, signs the hash using supplied witnesses and adds them to the transaction.
 func (tb *TxBuilder) Build() (tx Tx, err error) {
-	if tx.Witness != nil {
+	if tx.WitnessSet != nil {
 		return *tb.tx, nil
 	}
 
@@ -30,7 +30,7 @@ func (tb *TxBuilder) Build() (tx Tx, err error) {
 		return tx, err
 	}
 
-	txKeys := []*VKeyWitness{}
+	txKeys := []VKeyWitness{}
 	for _, prv := range tb.xprvs {
 		publicKey := prv.Public().PublicKey()
 		signature := prv.Sign(hash[:])
@@ -38,8 +38,8 @@ func (tb *TxBuilder) Build() (tx Tx, err error) {
 		txKeys = append(txKeys, NewVKeyWitness(publicKey, signature[:]))
 	}
 
-	tb.tx.Witness = NewTXWitness(
-		txKeys...,
+	tb.tx.WitnessSet = NewTXWitnessSet(
+		[]NativeScript{}, txKeys,
 	)
 
 	return *tb.tx, nil
@@ -54,7 +54,7 @@ func (tb *TxBuilder) Tx() (tx *Tx) {
 func (tb *TxBuilder) AddChangeIfNeeded(addr address.Address) {
 	// change is amount in utxo minus outputs minus fee
 	tb.tx.SetFee(tb.MinFee())
-	totalI, totalO := tb.getTotalInputOutputs()
+	totalI, totalO := tb.GetTotalInputOutputs()
 
 	change := totalI - totalO - uint(tb.tx.Body.Fee)
 	tb.tx.AddOutputs(
@@ -70,7 +70,7 @@ func (tb *TxBuilder) SetTTL(ttl uint32) {
 	tb.tx.Body.TTL = ttl
 }
 
-func (tb TxBuilder) getTotalInputOutputs() (inputs, outputs uint) {
+func (tb TxBuilder) GetTotalInputOutputs() (inputs, outputs uint) {
 	for _, inp := range tb.tx.Body.Inputs {
 		inputs += inp.Amount
 	}
@@ -90,27 +90,31 @@ func (tb TxBuilder) MinFee() (fee uint) {
 			Fee:     tb.tx.Body.Fee,
 			TTL:     tb.tx.Body.TTL,
 		},
-		Witness:  tb.tx.Witness,
-		Valid:    true,
-		Metadata: tb.tx.Metadata,
+		WitnessSet: tb.tx.WitnessSet,
+		Valid:      true,
+		Metadata:   tb.tx.Metadata,
 	}
 	feeTx.CalculateAuxiliaryDataHash()
-	if len(feeTx.Witness.Keys) == 0 {
+	if len(feeTx.WitnessSet.Witnesses) == 0 {
 		vWitness := NewVKeyWitness(
 			make([]byte, 32),
 			make([]byte, 64),
 		)
-		feeTx.Witness.Keys = append(feeTx.Witness.Keys, vWitness)
+		feeTx.WitnessSet.Witnesses = append(feeTx.WitnessSet.Witnesses, vWitness)
 	}
 
-	totalI, totalO := tb.getTotalInputOutputs()
+	// Not realy sure about this part of the function
+	// commented for further discusion
 
-	if totalI != (totalO) {
-		inner_addr, _ := address.NewAddress("addr_test1qqe6zztejhz5hq0xghlf72resflc4t2gmu9xjlf73x8dpf88d78zlt4rng3ccw8g5vvnkyrvt96mug06l5eskxh8rcjq2wyd63")
+	// totalI, totalO := tb.GetTotalInputOutputs()
 
-		feeTx.Body.Outputs = append(feeTx.Body.Outputs, NewTxOutput(inner_addr, (totalI-totalO-200000)))
+	// if totalI != (totalO) {
+	// 	inner_addr, _ := address.NewAddress("addr_test1qqe6zztejhz5hq0xghlf72resflc4t2gmu9xjlf73x8dpf88d78zlt4rng3ccw8g5vvnkyrvt96mug06l5eskxh8rcjq2wyd63")
 
-	}
+	// 	feeTx.Body.Outputs = append(feeTx.Body.Outputs, NewTxOutput(inner_addr, (totalI-totalO-200000)))
+
+	// }
+
 	lfee := fees.NewLinearFee(tb.protocol.TxFeePerByte, tb.protocol.TxFeeFixed)
 	// The fee may have increased enough to increase the number of bytes, so do one more pass
 	fee, _ = feeTx.Fee(lfee)

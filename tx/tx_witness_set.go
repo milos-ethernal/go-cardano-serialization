@@ -1,20 +1,15 @@
 package tx
 
-type Witness struct {
-	Keys    []*VKeyWitness `cbor:"0,keyasint,omitempty"`
-	Scripts []NativeScript `cbor:"1,keyasint,omitempty"`
+type WitnessSet struct {
+	Witnesses []VKeyWitness  `cbor:"0,keyasint,omitempty"`
+	Scripts   []NativeScript `cbor:"1,keyasint,omitempty"`
 }
 
 // NewTXWitness returns a pointer to a Witness created from VKeyWitnesses.
-func NewTXWitness(keys ...*VKeyWitness) *Witness {
-	if len(keys) == 0 {
-		return &Witness{
-			Keys: make([]*VKeyWitness, 0),
-		}
-	}
-
-	return &Witness{
-		Keys: keys,
+func NewTXWitnessSet(scripts []NativeScript, witnesses []VKeyWitness) *WitnessSet {
+	return &WitnessSet{
+		Witnesses: witnesses,
+		Scripts:   scripts,
 	}
 }
 
@@ -26,8 +21,8 @@ type VKeyWitness struct {
 }
 
 // NewVKeyWitness creates a Witness for Shelley Based transactions from a verification key and transaction signature.
-func NewVKeyWitness(vkey, signature []byte) *VKeyWitness {
-	return &VKeyWitness{
+func NewVKeyWitness(vkey, signature []byte) VKeyWitness {
+	return VKeyWitness{
 		VKey: vkey, Signature: signature,
 	}
 }

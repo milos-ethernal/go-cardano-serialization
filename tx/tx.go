@@ -10,19 +10,19 @@ import (
 )
 
 type Tx struct {
-	_        struct{} `cbor:",toarray"`
-	Body     *TxBody
-	Witness  *Witness
-	Valid    bool
-	Metadata interface{}
+	_          struct{} `cbor:",toarray"`
+	Body       *TxBody
+	WitnessSet *WitnessSet
+	Valid      bool
+	Metadata   interface{}
 }
 
 // NewTx returns a pointer to a new Transaction
 func NewTx() *Tx {
 	return &Tx{
-		Body:    NewTxBody(),
-		Witness: NewTXWitness(),
-		Valid:   true,
+		Body:       NewTxBody(),
+		WitnessSet: NewTXWitnessSet([]NativeScript{}, []VKeyWitness{}),
+		Valid:      true,
 	}
 }
 

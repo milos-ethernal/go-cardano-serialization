@@ -178,29 +178,6 @@ func TestMultisigTx(t *testing.T) {
 		panic(err)
 	}
 
-	privKeys := []bip32.XPrv{}
-
-	seed, _ := hex.DecodeString("6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
-	pk, err := bip32.NewXPrv(seed)
-	if err != nil {
-		panic(err)
-	}
-	privKeys = append(privKeys, pk)
-
-	seed, _ = hex.DecodeString("d7faba3a4686fc6928b15a9834c3928ad2a9fe12b1409fdff741241c17fd0161")
-	pk, err = bip32.NewXPrv(seed)
-	if err != nil {
-		panic(err)
-	}
-	privKeys = append(privKeys, pk)
-
-	seed, _ = hex.DecodeString("38ab88c5cf12f5251a3b6ba3c5af2379c0c7ee26ed15de90b2c497ac5a6619a5")
-	pk, err = bip32.NewXPrv(seed)
-	if err != nil {
-		panic(err)
-	}
-	privKeys = append(privKeys, pk)
-
 	builder := tx.NewTxBuilder(
 		pr,
 		[]bip32.XPrv{},
@@ -237,12 +214,12 @@ func TestMultisigTx(t *testing.T) {
 	// Set TTL for 5 min into the future
 	builder.SetTTL(uint32(tip.Slot) + uint32(300))
 
-	//Multisig signing
+	// Create script of multisig address
 	firstSignerKeyHash, _ := hex.DecodeString("d8f3f9ee291c253b7c12f4103f91f73026ec32690ad9bc99cc95f8f1")
 	secondSignerKeyHash, _ := hex.DecodeString("86b45d41aee0a41bc3c099d3108f251b4318a28f883e19abefb618c8")
 	thirdSignerKeyHash, _ := hex.DecodeString("159bf228e41bc1e2b5fd1f347627db28111848f6b044ab1dc8bf5f57")
 
-	mutlisigScript := tx.NativeScript{
+	multisigScript := tx.NativeScript{
 		Type:    3,
 		KeyHash: []byte{},
 		N:       2,
@@ -272,67 +249,78 @@ func TestMultisigTx(t *testing.T) {
 		IntervalValue: 0,
 	}
 
+	// Calculate fee before signing
+	// Fee is a part of TxBody
+	// Using AddChangeIfNeeded() will change tx that is being signed
+	// Without added witnesses it will calculate fee wrong
+
+	// Set arbitrary value for witnesses
+	for i := 0; i < int(multisigScript.N)+1; i++ {
+		vWitness := tx.NewVKeyWitness(
+			make([]byte, 32),
+			make([]byte, 64),
+		)
+		builder.Tx().WitnessSet.Witnesses = append(builder.Tx().WitnessSet.Witnesses, vWitness)
+	}
+
+	// Set multisig NativeScript
+	builder.Tx().WitnessSet.Scripts = []tx.NativeScript{multisigScript}
+
+	// Set multisig change output to difference between input and output amounts for fee calculation
+	// If 0 is set instead of difference between total input and output
+	// the fee calculation will be lower and tx won't pass
+	totalI, totalO := builder.GetTotalInputOutputs()
+	builder.AddOutputs(tx.NewTxOutput(
+		sender,
+		uint(totalI-totalO),
+	))
+
+	// Calculate fee
+	builder.Tx().SetFee(builder.MinFee())
+
+	// Update multisig change to = input - fee - output
+	change := totalI - totalO - uint(builder.Tx().Body.Fee)
+
+	builder.Tx().Body.Outputs[len(builder.Tx().Body.Outputs)-1].Amount = change
+
+	// Multisig signing
+
+	privKeys := []bip32.XPrv{}
+
+	seed, _ := hex.DecodeString("6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
+	pk, err := bip32.NewXPrv(seed)
+	if err != nil {
+		panic(err)
+	}
+	privKeys = append(privKeys, pk)
+
+	seed, _ = hex.DecodeString("d7faba3a4686fc6928b15a9834c3928ad2a9fe12b1409fdff741241c17fd0161")
+	pk, err = bip32.NewXPrv(seed)
+	if err != nil {
+		panic(err)
+	}
+	privKeys = append(privKeys, pk)
+
+	seed, _ = hex.DecodeString("38ab88c5cf12f5251a3b6ba3c5af2379c0c7ee26ed15de90b2c497ac5a6619a5")
+	pk, err = bip32.NewXPrv(seed)
+	if err != nil {
+		panic(err)
+	}
+	privKeys = append(privKeys, pk)
+
 	hash, _ := builder.Tx().Hash()
-	txKeys := []*tx.VKeyWitness{}
+	txKeys := []tx.VKeyWitness{}
 	for _, prv := range privKeys {
 		publicKey := prv.Public().PublicKey()
 		signature := prv.Sign(hash[:])
 		txKeys = append(txKeys, tx.NewVKeyWitness(publicKey, signature[:]))
 	}
 
-	builder.Tx().Witness = tx.NewTXWitness(
-		txKeys...,
-	)
-	builder.Tx().Witness.Scripts = []tx.NativeScript{mutlisigScript}
+	builder.Tx().WitnessSet.Witnesses = txKeys
 
-	// fee := builder.MinFee()
-	// builder.Tx().SetFee(fee)
-
-	// Route back the change to the source address
-	// This is equivalent to adding an output with the source address and change amount
-	builder.AddChangeIfNeeded(sender)
-
-	// Build loops through the witness private keys and signs the transaction body hash
-	// txFinal, err := builder.Build()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 	txFinal := builder.Tx()
 
-	// fmt.Println(txFinal.Witness.Keys)
-	// fmt.Println(txFinal.Witness.Scripts)
-	// fmt.Println(txFinal.Hash())
-
-	hash, _ = txFinal.Hash()
-	txKeys = []*tx.VKeyWitness{}
-	for _, prv := range privKeys {
-		publicKey := prv.Public().PublicKey()
-		signature := prv.Sign(hash[:])
-		txKeys = append(txKeys, tx.NewVKeyWitness(publicKey, signature[:]))
-	}
-
-	txFinal.Witness = tx.NewTXWitness(
-		txKeys...,
-	)
-	txFinal.Witness.Scripts = []tx.NativeScript{mutlisigScript}
-
 	transaction, _ := txFinal.Bytes()
-	// fmt.Println(txFinal.Witness.Keys)
-	// fmt.Println(txFinal.Witness.Scripts)
-	// fmt.Println(txFinal.Hash())
-
-	// assert.Equal(t, 1, 2)
-	// return
-
-	//return
-	//TxFeePerByte: 44,
-	//TxFeeFixed:   155381,
-
-	// fee, _ := txFinal.Fee(&fees.LinearFee{
-	// 	TxFeePerByte: pr.TxFeePerByte,
-	// 	TxFeeFixed:   pr.TxFeeFixed,
-	// })
-	// txFinal.SetFee(fee)
 
 	// Set up the URL for the cardano-submit-api
 	url := "http://localhost:8090/api/submit/tx"
