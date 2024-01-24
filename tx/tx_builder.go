@@ -21,6 +21,10 @@ func (tb *TxBuilder) Sign(xprv bip32.XPrv) {
 
 // Build creates hash of transaction, signs the hash using supplied witnesses and adds them to the transaction.
 func (tb *TxBuilder) Build() (tx Tx, err error) {
+	if tx.Witness != nil {
+		return *tb.tx, nil
+	}
+
 	hash, err := tb.tx.Hash()
 	if err != nil {
 		return tx, err

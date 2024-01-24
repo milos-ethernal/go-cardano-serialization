@@ -4,6 +4,9 @@ else
 	DEL := rm
 endif
 
+test-tx :
+	cd tx && go test -timeout 30s -v -run TestMultisigTx
+
 all : test
 
 test : coverage clean

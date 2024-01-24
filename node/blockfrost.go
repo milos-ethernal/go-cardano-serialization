@@ -128,7 +128,7 @@ func (b *blockfrostNode) SubmitTx(txFinal tx.Tx) (txHash string, err error) {
 func NewBlockfrostClient(projectId string, network *network.NetworkInfo) Node {
 	var serverUrl string
 	if network.NetworkId == 0 {
-		serverUrl = blockfrost.CardanoTestNet
+		serverUrl = blockfrost.CardanoPreview
 	} else {
 		serverUrl = blockfrost.CardanoMainNet
 	}
@@ -150,7 +150,6 @@ func NewBlockfrostClient(projectId string, network *network.NetworkInfo) Node {
 
 // QueryTip is the equivalent of
 // `cardano-cli query tip ${network_parameters}`
-//
 func (b *blockfrostNode) QueryTip() (nt NetworkTip, err error) {
 	block, err := b.client.BlockLatest(context.TODO())
 

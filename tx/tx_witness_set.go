@@ -1,7 +1,8 @@
 package tx
 
 type Witness struct {
-	Keys []*VKeyWitness `cbor:"0,keyasint,omitempty"`
+	Keys    []*VKeyWitness `cbor:"0,keyasint,omitempty"`
+	Scripts []NativeScript `cbor:"1,keyasint,omitempty"`
 }
 
 // NewTXWitness returns a pointer to a Witness created from VKeyWitnesses.
