@@ -10,19 +10,20 @@ import (
 )
 
 type Tx struct {
-	_          struct{} `cbor:",toarray"`
-	Body       *TxBody
-	WitnessSet *WitnessSet
-	Valid      bool
-	Metadata   interface{}
+	_             struct{} `cbor:",toarray"`
+	Body          *TxBody
+	WitnessSet    *WitnessSet
+	Valid         bool
+	AuxiliaryData *AuxiliaryData // or null
 }
 
 // NewTx returns a pointer to a new Transaction
 func NewTx() *Tx {
 	return &Tx{
-		Body:       NewTxBody(),
-		WitnessSet: NewTXWitnessSet([]NativeScript{}, []VKeyWitness{}),
-		Valid:      true,
+		Body:          NewTxBody(),
+		WitnessSet:    NewTXWitnessSet([]NativeScript{}, []VKeyWitness{}),
+		Valid:         true,
+		AuxiliaryData: nil,
 	}
 }
 
@@ -81,8 +82,8 @@ func (t *Tx) SetFee(fee uint) {
 }
 
 func (t *Tx) CalculateAuxiliaryDataHash() error {
-	if t.Metadata != nil {
-		mdBytes, err := cbor.Marshal(&t.Metadata)
+	if t.AuxiliaryData != nil {
+		mdBytes, err := cbor.Marshal(&t.AuxiliaryData)
 		if err != nil {
 			return fmt.Errorf("cannot serialize metadata: %w", err)
 		}

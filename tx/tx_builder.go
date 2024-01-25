@@ -90,9 +90,9 @@ func (tb TxBuilder) MinFee() (fee uint) {
 			Fee:     tb.tx.Body.Fee,
 			TTL:     tb.tx.Body.TTL,
 		},
-		WitnessSet: tb.tx.WitnessSet,
-		Valid:      true,
-		Metadata:   tb.tx.Metadata,
+		WitnessSet:    tb.tx.WitnessSet,
+		Valid:         true,
+		AuxiliaryData: tb.tx.AuxiliaryData,
 	}
 	feeTx.CalculateAuxiliaryDataHash()
 	if len(feeTx.WitnessSet.Witnesses) == 0 {

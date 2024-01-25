@@ -143,6 +143,35 @@ func TestBlockfrostAPI(t *testing.T) {
 	assert.NotEqual(t, 0, pr.MaxTxSize)
 }
 
+func TestAuxiliaryData(t *testing.T) {
+	// Load env variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("err loading: %v", err)
+	}
+
+	cli := node.NewBlockfrostClient(
+		os.Getenv("BLOCKFROST_PROJECT_ID"),
+		network.TestNet(),
+	)
+
+	// Get protocol parameters
+	pr, err := cli.ProtocolParameters()
+	if err != nil {
+		panic(err)
+	}
+
+	builder := tx.NewTxBuilder(
+		pr,
+		[]bip32.XPrv{},
+	)
+
+	builder.Tx().AuxiliaryData = tx.NewAuxiliaryData()
+	builder.Tx().AuxiliaryData.AddMetadataElement("string", "value")
+
+	assert.Equal(t, "value", builder.Tx().AuxiliaryData.Metadata[1]["string"])
+}
+
 func TestMultisigTx(t *testing.T) {
 	// Load env variables
 	err := godotenv.Load()
@@ -248,6 +277,10 @@ func TestMultisigTx(t *testing.T) {
 		},
 		IntervalValue: 0,
 	}
+
+	// Add metadata
+	builder.Tx().AuxiliaryData = tx.NewAuxiliaryData()
+	builder.Tx().AuxiliaryData.AddMetadataElement("string", "test")
 
 	// Calculate fee before signing
 	// Fee is a part of TxBody
