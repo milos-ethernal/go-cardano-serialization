@@ -130,12 +130,12 @@ func TestBlockfrostAPI(t *testing.T) {
 		log.Fatalf("err loading: %v", err)
 	}
 
-	cli := node.NewBlockfrostClient(
+	blockfrostApi := node.NewBlockfrostClient(
 		os.Getenv("BLOCKFROST_PROJECT_ID"),
 		network.TestNet(),
 	)
 
-	pr, err := cli.ProtocolParameters()
+	pr, err := blockfrostApi.ProtocolParameters()
 	if err != nil {
 		panic(err)
 	}
@@ -150,13 +150,13 @@ func TestAuxiliaryData(t *testing.T) {
 		log.Fatalf("err loading: %v", err)
 	}
 
-	cli := node.NewBlockfrostClient(
+	blockfrostApi := node.NewBlockfrostClient(
 		os.Getenv("BLOCKFROST_PROJECT_ID"),
 		network.TestNet(),
 	)
 
 	// Get protocol parameters
-	pr, err := cli.ProtocolParameters()
+	pr, err := blockfrostApi.ProtocolParameters()
 	if err != nil {
 		panic(err)
 	}
@@ -179,16 +179,21 @@ func TestMultisigTx(t *testing.T) {
 		log.Fatalf("err loading: %v", err)
 	}
 
-	cli := node.NewBlockfrostClient(
+	blockfrostApi := node.NewBlockfrostClient(
 		os.Getenv("BLOCKFROST_PROJECT_ID"),
 		network.TestNet(),
 	)
 
 	// Get protocol parameters
-	pr, err := cli.ProtocolParameters()
+	pr, err := blockfrostApi.ProtocolParameters()
 	if err != nil {
 		panic(err)
 	}
+
+	builder := tx.NewTxBuilder(
+		pr,
+		[]bip32.XPrv{},
+	)
 
 	// Multisig address
 	sender, err := address.NewAddress("addr_test1wqklxqkgu755t8lxv6haj6aymqhzuljxc8wmpc546ulslks5tr7ya")
@@ -202,15 +207,10 @@ func TestMultisigTx(t *testing.T) {
 	}
 
 	// Get the senders available UTXOs
-	utxos, err := cli.UTXOs(sender)
+	utxos, err := blockfrostApi.UTXOs(sender)
 	if err != nil {
 		panic(err)
 	}
-
-	builder := tx.NewTxBuilder(
-		pr,
-		[]bip32.XPrv{},
-	)
 
 	// Send 1000000 lovelace or 1 ADA
 	sendAmount := 1000000
@@ -218,7 +218,7 @@ func TestMultisigTx(t *testing.T) {
 
 	// Loop through utxos to find first input with enough ADA
 	for _, utxo := range utxos {
-		minRequired := sendAmount + 1000000 + 200000
+		minRequired := sendAmount + 200000
 		if utxo.Amount >= uint(minRequired) {
 			firstMatchInput = utxo
 		}
@@ -235,7 +235,7 @@ func TestMultisigTx(t *testing.T) {
 
 	// Query tip from a node on the network. This is to get the current slot
 	// and compute TTL of transaction.
-	tip, err := cli.QueryTip()
+	tip, err := blockfrostApi.QueryTip()
 	if err != nil {
 		log.Fatal(err)
 	}
