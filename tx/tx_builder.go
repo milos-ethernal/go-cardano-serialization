@@ -52,8 +52,6 @@ func (tb *TxBuilder) Tx() (tx *Tx) {
 
 // AddChangeIfNeeded calculates the excess change from UTXO inputs - outputs and adds it to the transaction body.
 func (tb *TxBuilder) AddChangeIfNeeded(addr address.Address) {
-	// change is amount in utxo minus outputs minus fee
-	tb.tx.SetFee(tb.MinFee())
 	totalI, totalO := tb.GetTotalInputOutputs()
 
 	change := totalI - totalO - uint(tb.tx.Body.Fee)
@@ -63,6 +61,12 @@ func (tb *TxBuilder) AddChangeIfNeeded(addr address.Address) {
 			change,
 		),
 	)
+
+	// change is amount in utxo minus outputs minus fee
+	tb.tx.SetFee(tb.MinFee())
+
+	// update change amount
+	tb.tx.Body.Outputs[len(tb.tx.Body.Outputs)-1].Amount = totalI - totalO - uint(tb.tx.Body.Fee)
 }
 
 // SetTTL sets the time to live for the transaction.
