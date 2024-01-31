@@ -6,8 +6,10 @@ import (
 	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
 )
 
+type MetadataElement interface{}
+
 // Metadata represents the transaction metadata.
-type Metadata map[uint]map[string]string
+type Metadata map[uint]map[string]MetadataElement
 
 // AuxiliaryData is the auxiliary data in the transaction.
 type AuxiliaryData struct {
@@ -19,18 +21,35 @@ type AuxiliaryData struct {
 
 func NewAuxiliaryData() *AuxiliaryData {
 	return &AuxiliaryData{
-		Metadata:           make(map[uint]map[string]string),
+		Metadata:           make(map[uint]map[string]MetadataElement),
 		NativeScripts:      nil,
 		PlutusScripts:      nil,
 		PreferAlonzoFormat: false,
 	}
 }
 
-func (d *AuxiliaryData) AddMetadataElement(key string, value string) {
-	index := len(d.Metadata) + 1
+func (d *AuxiliaryData) AddMetadataElement(key string, value MetadataElement) {
+	if d.Metadata[1] == nil {
+		d.Metadata[1] = make(map[string]MetadataElement)
+	}
 
-	d.Metadata[uint(index)] = make(map[string]string)
-	d.Metadata[uint(index)][key] = value
+	d.Metadata[1][key] = value
+}
+
+func (d *AuxiliaryData) AddMetadataTransaction(address string, amount uint) {
+	if d.Metadata[1] == nil {
+		d.Metadata[1] = make(map[string]MetadataElement)
+	}
+	if d.Metadata[1]["transactions"] == nil {
+		d.Metadata[1]["transactions"] = []map[string]uint{}
+	}
+
+	if transactionsSlice, ok := d.Metadata[1]["transactions"].([]map[string]uint); ok {
+		transactionsSlice = append(transactionsSlice, map[string]uint{address: amount})
+		d.Metadata[1]["transactions"] = transactionsSlice
+	} else {
+		panic("Wrong format: transactions field of metadata is expected to be []map[string]uint")
+	}
 }
 
 // MarshalCBOR implements cbor.Marshaler

@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMultisigTxFee(t *testing.T) {
+func TestFeeForMultisigTx(t *testing.T) {
 	// Load env variables
 	err := godotenv.Load()
 	if err != nil {
@@ -226,7 +226,7 @@ func TestMultisigTxFee(t *testing.T) {
 	assert.Equal(t, calculatedFee, nodeFee)
 }
 
-func TestSimpleTxFee(t *testing.T) {
+func TestFeeForSimpleTx(t *testing.T) {
 	// Load env variables
 	err := godotenv.Load()
 	if err != nil {

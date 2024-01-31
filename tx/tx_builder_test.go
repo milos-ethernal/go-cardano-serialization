@@ -383,6 +383,110 @@ func TestMultisigTx(t *testing.T) {
 	assert.Equal(t, 202, resp.StatusCode)
 }
 
+func TestSimpleTx(t *testing.T) {
+	// Load env variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("err loading: %v", err)
+	}
+
+	cli := node.NewBlockfrostClient(
+		os.Getenv("BLOCKFROST_PROJECT_ID"),
+		network.TestNet(),
+	)
+
+	pr, err := cli.ProtocolParameters()
+	if err != nil {
+		panic(err)
+	}
+
+	seed, _ := hex.DecodeString("085de0735c76409f64a704e05eafdccd49f733a1dffea5e5bd514c6904179e948")
+	pk, err := bip32.NewXPrv(seed)
+	if err != nil {
+		panic(err)
+	}
+
+	sender, err := address.NewAddress("addr_test1vpe3gtplyv5ygjnwnddyv0yc640hupqgkr2528xzf5nms7qalkkln")
+	if err != nil {
+		panic(err)
+	}
+
+	receiver, err := address.NewAddress("addr_test1vptkepz8l4ze03478cvv6ptwduyglgk6lckxytjthkvvluc3dewfd")
+	if err != nil {
+		panic(err)
+	}
+
+	// Get the senders available UTXOs
+	utxos, err := cli.UTXOs(sender)
+	if err != nil {
+		panic(err)
+	}
+
+	builder := tx.NewTxBuilder(
+		pr,
+		[]bip32.XPrv{pk},
+	)
+
+	// Send 1000000 lovelace or 1 ADA
+	sendAmount := 1000000
+	var firstMatchInput tx.TxInput
+
+	// Loop through utxos to find first input with enough ADA
+	for _, utxo := range utxos {
+		minRequired := sendAmount + 1000000 + 200000
+		if utxo.Amount >= uint(minRequired) {
+			firstMatchInput = utxo
+		}
+	}
+
+	// Add the transaction Input / UTXO
+	builder.AddInputs(&firstMatchInput)
+
+	// Add a transaction output with the receiver's address and amount of 1 ADA
+	builder.AddOutputs(tx.NewTxOutput(
+		receiver,
+		uint(sendAmount),
+	))
+
+	// Query tip from a node on the network. This is to get the current slot
+	// and compute TTL of transaction.
+	tip, err := cli.QueryTip()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Set TTL for 5 min into the future
+	builder.SetTTL(uint32(tip.Slot) + uint32(300))
+
+	// Set metadata
+	builder.Tx().AuxiliaryData = tx.NewAuxiliaryData()
+	builder.Tx().AuxiliaryData.AddMetadataElement("chainId", "vector")
+	builder.Tx().AuxiliaryData.AddMetadataTransaction("addr1", 1000000)
+	builder.Tx().AuxiliaryData.AddMetadataTransaction("addr2", 500000)
+	builder.Tx().AuxiliaryData.AddMetadataTransaction("addr3", 1000)
+
+	// Route back the change to the source address
+	// This is equivalent to adding an output with the source address and change amount
+	builder.AddChangeIfNeeded(sender)
+
+	// Build loops through the witness private keys and signs the transaction body hash
+	txFinal, err := builder.Build()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	transaction, _ := txFinal.Bytes()
+
+	// Submit tx to local cardano-submit-api
+	statusCode, msg := node.SubmitTx(transaction)
+
+	// Print the response status code and body
+	fmt.Println("Status Code:", statusCode)
+	fmt.Println("Response Body:", msg)
+
+	assert.Equal(t, 202, statusCode)
+}
+
 func TestTxBuilderRaw(t *testing.T) {
 	createRootKey()
 
