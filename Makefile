@@ -9,6 +9,9 @@ test-multisig-tx :
 
 test-simple-tx :
 	cd tx && go test -timeout 30s -v -run TestSimpleTx
+
+test-user:
+	$(MAKE) -C components
 	
 all : test
 

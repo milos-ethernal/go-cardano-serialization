@@ -41,14 +41,14 @@ func (d *AuxiliaryData) AddMetadataTransaction(address string, amount uint) {
 		d.Metadata[1] = make(map[string]MetadataElement)
 	}
 	if d.Metadata[1]["transactions"] == nil {
-		d.Metadata[1]["transactions"] = []map[string]uint{}
+		d.Metadata[1]["transactions"] = []map[string]interface{}{}
 	}
 
-	if transactionsSlice, ok := d.Metadata[1]["transactions"].([]map[string]uint); ok {
-		transactionsSlice = append(transactionsSlice, map[string]uint{address: amount})
+	if transactionsSlice, ok := d.Metadata[1]["transactions"].([]map[string]interface{}); ok {
+		transactionsSlice = append(transactionsSlice, map[string]interface{}{"address": address, "amount": amount})
 		d.Metadata[1]["transactions"] = transactionsSlice
 	} else {
-		panic("Wrong format: transactions field of metadata is expected to be []map[string]uint")
+		panic("Wrong format: transactions field of metadata is expected to be []map[string]interface{}")
 	}
 }
 
