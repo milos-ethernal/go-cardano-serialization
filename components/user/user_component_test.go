@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
-	user "github.com/fivebinaries/go-cardano-serialization/components"
+	user "github.com/fivebinaries/go-cardano-serialization/components/user"
 	"github.com/fivebinaries/go-cardano-serialization/node"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
 	"github.com/stretchr/testify/assert"
