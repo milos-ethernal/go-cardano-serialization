@@ -11,7 +11,10 @@ test-simple-tx :
 	cd tx && go test -timeout 30s -v -run TestSimpleTx
 
 test-user:
-	$(MAKE) -C components
+	$(MAKE) -C components test-user
+
+test-batcher:
+	$(MAKE) -C components test-batcher
 	
 all : test
 

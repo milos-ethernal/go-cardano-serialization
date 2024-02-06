@@ -3,6 +3,7 @@ package node
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -202,7 +203,7 @@ func (o *ogmiosNode) SubmitTx(txCborString string) (string, error) {
 		// Combine and return error information
 		errorMessage := fmt.Sprintf("Code: %d, Message: %s, MissingScripts: %v",
 			responseData.Error.Code, responseData.Error.Message, responseData.Error.Data.MissingScripts)
-		return errorMessage, nil
+		return "", errors.New(errorMessage)
 	}
 
 	// Return the transaction ID on success

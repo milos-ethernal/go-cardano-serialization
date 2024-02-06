@@ -1,4 +1,4 @@
-package user
+package batcher
 
 import (
 	"errors"
@@ -12,10 +12,63 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Get users available UTXOs
-func getUsersUTXOs(address address.Address) ([]tx.TxInput, error) {
+// Currently mocked
+// UPDATETODO: Query data from contract
+func getConfirmedTxs(destinationChain string) (receivers map[string]uint, err error) {
+	receivers = map[string]uint{"addr_test1vpe3gtplyv5ygjnwnddyv0yc640hupqgkr2528xzf5nms7qalkkln": 1000000}
+	return
+}
+
+func getBatchNonceId() (uint, error) {
+	return 1, nil
+}
+
+// Currently mocked to get the UTXOs directly from chain
+// UPDATETODO: Query data from contract
+func getUTXOs(addressString string, amount uint) (chosenUTXOs []tx.TxInput, err error) {
 	ogmios := node.NewOgmiosNode("http://localhost:1337")
-	return ogmios.UTXOs(address)
+
+	senderAddress, err := address.NewAddress(addressString)
+	if err != nil {
+		return
+	}
+
+	utxos, err := ogmios.UTXOs(senderAddress)
+	if err != nil {
+		return []tx.TxInput{}, err
+	}
+
+	var firstMatchInput = tx.TxInput{
+		Marshaler: nil,
+		TxHash:    []byte{},
+		Index:     0,
+		Amount:    0,
+	}
+
+	// Loop through utxos to find first input with enough tokens
+	// If we don't have this UTXO we need to use more of them
+	var amountSum = uint(0)
+
+	for _, utxo := range utxos {
+		if utxo.Amount >= amount {
+			firstMatchInput = utxo
+			break
+		}
+
+		amountSum += utxo.Amount
+		chosenUTXOs = append(chosenUTXOs, utxo)
+
+		if amountSum >= amount {
+			break
+		}
+	}
+
+	// Check if address have sufficent amount for transaction
+	if firstMatchInput.Amount != 0 {
+		chosenUTXOs = []tx.TxInput{firstMatchInput}
+	}
+
+	return
 }
 
 // Get protocol parameters
