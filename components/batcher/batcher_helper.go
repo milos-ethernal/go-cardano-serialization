@@ -38,34 +38,23 @@ func getUTXOs(addressString string, amount uint) (chosenUTXOs []tx.TxInput, err 
 		return []tx.TxInput{}, err
 	}
 
-	var firstMatchInput = tx.TxInput{
-		Marshaler: nil,
-		TxHash:    []byte{},
-		Index:     0,
-		Amount:    0,
-	}
-
 	// Loop through utxos to find first input with enough tokens
 	// If we don't have this UTXO we need to use more of them
 	var amountSum = uint(0)
+	var minUtxoValue = uint(1000000)
 
 	for _, utxo := range utxos {
-		if utxo.Amount >= amount {
-			firstMatchInput = utxo
+		if utxo.Amount == amount || utxo.Amount >= amount+minUtxoValue {
+			chosenUTXOs = []tx.TxInput{utxo}
 			break
 		}
 
 		amountSum += utxo.Amount
 		chosenUTXOs = append(chosenUTXOs, utxo)
 
-		if amountSum >= amount {
+		if amountSum == amount || amountSum >= amount+minUtxoValue {
 			break
 		}
-	}
-
-	// Check if address have sufficent amount for transaction
-	if firstMatchInput.Amount != 0 {
-		chosenUTXOs = []tx.TxInput{firstMatchInput}
 	}
 
 	return

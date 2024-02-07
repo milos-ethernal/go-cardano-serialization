@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -13,9 +14,43 @@ import (
 )
 
 // Get users available UTXOs
-func getUsersUTXOs(address address.Address) ([]tx.TxInput, error) {
+func getUsersUTXOs(address address.Address, amount uint, potentialFee uint) (chosenUTXOs []*tx.TxInput, err error) {
 	ogmios := node.NewOgmiosNode("http://localhost:1337")
-	return ogmios.UTXOs(address)
+
+	utxos, err := ogmios.UTXOs(address)
+	if err != nil {
+		return []*tx.TxInput{}, err
+	}
+
+	// Loop through utxos to find first input with enough tokens
+	// If we don't have this UTXO we need to use more of them
+	var amountSum = uint(0)
+	var minUtxoValue = uint(1000000)
+
+	for _, utxo := range utxos {
+		if utxo.Amount >= amount+potentialFee+minUtxoValue {
+			chosenUTXOs = []*tx.TxInput{&utxo}
+			break
+		}
+
+		amountSum += utxo.Amount
+		chosenUTXOs = append(chosenUTXOs, &tx.TxInput{
+			Marshaler: nil,
+			TxHash:    utxo.TxHash,
+			Index:     utxo.Index,
+			Amount:    utxo.Amount,
+		})
+
+		if amountSum >= amount+potentialFee+minUtxoValue {
+			break
+		}
+	}
+
+	if amountSum < amount+potentialFee+minUtxoValue {
+		err = errors.New("no enough available funds for generating transaction " + fmt.Sprint(amountSum) + " available but " + fmt.Sprint(amount+potentialFee+minUtxoValue) + " required")
+		return
+	}
+	return
 }
 
 // Get protocol parameters

@@ -2,7 +2,6 @@ package user
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
@@ -44,51 +43,26 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 
 	// 1. Check if user has enough funds for the transaction
 
-	// Get the users available UTXOs
-	utxos, err := getUsersUTXOs(senderAddress)
-	if err != nil {
-		return
-	}
-
 	// Calculate the summ of all receivers + multisig fee + potential transaction fee
 	// UPDATETODO: Do some calculation for potential fee instead of 200000
+	// UPDATETODO: MinUtxoValue in protocol parameters doesn't match the real value,
+	// currently on preview testnet minUtxoValue is null, but realy it is "hidden".
+	// It can be calculated as: minUTxoVal = (160 + sizeInBytes (TxOut)) * coinsPerUTxOByte
+	minUtxoValue := uint(1000000)
 	sendAmount := uint(0) + multisigFee
 	potentialFee := uint(200000)
-	for _, value := range receiversAndAmounts {
-		sendAmount += value
-	}
-
-	// Firstly check if we have input that can satisfy whole amount
-	var firstMatchInput = tx.TxInput{
-		Marshaler: nil,
-		TxHash:    []byte{},
-		Index:     0,
-		Amount:    0,
-	}
-
-	// Loop through utxos to find first input with enough tokens
-	// If we don't have this UTXO we need to use more of them
-	var amountSum = uint(0)
-	var chosenUTXOs []tx.TxInput
-
-	for _, utxo := range utxos {
-		if utxo.Amount >= sendAmount+potentialFee {
-			firstMatchInput = utxo
-			break
+	for receiverAddress, amount := range receiversAndAmounts {
+		_, err = address.NewAddress(receiverAddress)
+		if err != nil {
+			return
 		}
 
-		amountSum += utxo.Amount
-		chosenUTXOs = append(chosenUTXOs, utxo)
-
-		if amountSum >= sendAmount+potentialFee {
-			break
+		if amount < minUtxoValue {
+			err = errors.New("receivers amount cannot be under 1000000 tokens")
+			return
 		}
-	}
 
-	// Check if address have sufficent amount for transaction
-	if firstMatchInput.Amount == 0 && amountSum < sendAmount+potentialFee {
-		err = errors.New("no enough available funds for generating transaction " + fmt.Sprint(amountSum) + " available but " + fmt.Sprint(sendAmount+potentialFee) + " required")
-		return
+		sendAmount += amount
 	}
 
 	// Instantiate transaction builder
@@ -102,14 +76,13 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 		[]bip32.XPrv{},
 	)
 
-	// Add inputs to transaction
-	if firstMatchInput.Amount != 0 {
-		builder.AddInputs(&firstMatchInput)
-	} else {
-		for _, utxo := range chosenUTXOs {
-			builder.AddInputs(&utxo)
-		}
+	// Get the users UTXOs
+	utxos, err := getUsersUTXOs(senderAddress, sendAmount, potentialFee)
+	if err != nil {
+		return
 	}
+
+	builder.AddInputs(utxos...)
 
 	// 2. Check if all provided addresses are correct
 
@@ -120,11 +93,6 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	builder.Tx().AuxiliaryData.AddMetadataElement("chainId", chainId)
 
 	for addressString, amount := range receiversAndAmounts {
-		_, err = address.NewAddress(addressString)
-		if err != nil {
-			return
-		}
-
 		builder.Tx().AuxiliaryData.AddMetadataTransaction(addressString, amount)
 	}
 
