@@ -33,6 +33,27 @@ func (r *RewardAddress) MarshalCBOR() ([]byte, error) {
 	return cbor.Marshal(r.Bytes)
 }
 
+// UnmarshalCBOR implements the cbor.Unmarshaler interface for RewardAddress.
+func (r *RewardAddress) UnmarshalCBOR(data []byte) error {
+	// Define a struct to decode the CBOR data into
+	var cborData struct {
+		_       struct{} `cbor:",toarray"`
+		Network network.NetworkInfo
+		Stake   StakeCredential
+	}
+
+	// Unmarshal the CBOR data into the cborData struct
+	if err := cbor.Unmarshal(data, &cborData); err != nil {
+		return err
+	}
+
+	// Set values to the RewardAddress struct
+	r.Network = cborData.Network
+	r.Stake = cborData.Stake
+
+	return nil
+}
+
 // NetworkInfo returns pointer to NetworkInfo{ProtocolMagigic and NetworkId}.
 func (r *RewardAddress) NetworkInfo() *network.NetworkInfo {
 	return &(r.Network)

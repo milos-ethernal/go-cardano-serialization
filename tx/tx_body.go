@@ -8,6 +8,7 @@ import (
 
 // TxBody contains the inputs, outputs, fee and titme to live for the transaction.
 type TxBody struct {
+	_                 struct{}    `cbor:",toarray"`
 	Inputs            []*TxInput  `cbor:"0,keyasint"`
 	Outputs           []*TxOutput `cbor:"1,keyasint"`
 	Fee               uint64      `cbor:"2,keyasint"`

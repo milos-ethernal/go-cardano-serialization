@@ -13,10 +13,11 @@ type Metadata map[uint]map[string]MetadataElement
 
 // AuxiliaryData is the auxiliary data in the transaction.
 type AuxiliaryData struct {
+	_                  struct{}    `cbor:",toarray"`
 	Metadata           Metadata    `cbor:"0,keyasint,omitempty"`
 	NativeScripts      interface{} `cbor:"1,keyasint,omitempty"`
 	PlutusScripts      interface{} `cbor:"2,keyasint,omitempty"`
-	PreferAlonzoFormat bool        `cbor:"2,keyasint,omitempty"`
+	PreferAlonzoFormat bool        `cbor:"3,keyasint,omitempty"`
 }
 
 func NewAuxiliaryData() *AuxiliaryData {

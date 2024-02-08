@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
 	"github.com/fivebinaries/go-cardano-serialization/components/batcher"
+	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
 	"github.com/fivebinaries/go-cardano-serialization/node"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
 	"github.com/stretchr/testify/assert"
@@ -107,13 +109,30 @@ func TestBatcherSubmitBatchingTxToNode(t *testing.T) {
 	fmt.Println(res)
 }
 
-// func TestSubmitBatchingTx(t *testing.T) {
-// 	transacion, err := batcher.BuildBatchingTx("vector")
-// 	assert.NoError(t, err)
+func TestSubmitBatchingTx(t *testing.T) {
+	transacion, err := batcher.BuildBatchingTx("vector")
+	assert.NoError(t, err)
 
-// 	witness, err := batcher.WitnessBatchingTx(transacion, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
-// 	assert.NoError(t, err)
+	witness, err := batcher.WitnessBatchingTx(*transacion, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
+	assert.NoError(t, err)
 
-// 	batcher.SubmitBatchingTx(transacion, witness)
-// 	assert.Equal(t, 1, 2)
-// }
+	err = batcher.SubmitBatchingTx(*transacion, witness)
+	assert.NoError(t, err)
+}
+
+func TestAddressMarshaling(t *testing.T) {
+	addr, err := address.NewAddress("addr_test1wrv5yn3vyx58zld5xahs4e0ezrcjyezldqjtch8cnyt92zcklzc25")
+	assert.NoError(t, err)
+
+	addrBytes, err := cbor.Marshal(addr.Bytes())
+	assert.NoError(t, err)
+
+	var addrFromBytes []byte
+	err = cbor.Unmarshal(addrBytes, &addrFromBytes)
+	assert.NoError(t, err)
+
+	addrFromBytesAddr, err := address.NewAddressFromBytes(addrFromBytes)
+	assert.NoError(t, err)
+
+	assert.Equal(t, addr, addrFromBytesAddr)
+}

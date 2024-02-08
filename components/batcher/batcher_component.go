@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/fivebinaries/go-cardano-serialization/address"
@@ -263,61 +264,95 @@ func WitnessBatchingTx(transaction tx.Tx, pkSeed string) (witness tx.VKeyWitness
 
 // UPDATETODO: Finish this method together with cbor Marshaling and Unmarshaling
 // Mocked to write to file instead to bridge chain
-func SubmitBatchingTx(transaction tx.Tx, witness tx.VKeyWitness) {
-	txBytes, err := transaction.Bytes()
+func SubmitBatchingTx(transaction tx.Tx, witness tx.VKeyWitness) (err error) {
+	transaction.WitnessSet.Witnesses = []tx.VKeyWitness{}
+
+	type Submit struct {
+		_           struct{} `cbor:",toarray"`
+		Transaction tx.Tx
+		Witness     tx.VKeyWitness
+	}
+
+	writeToFile := Submit{
+		Transaction: transaction,
+		Witness:     witness,
+	}
+
+	bytesToWrite, err := cbor.Marshal(writeToFile)
 	if err != nil {
 		return
 	}
 
-	// witnessBytes, err := cbor.Marshal(witness)
-	// if err != nil {
-	// 	return
-	// }
-
 	// Write byte arrays to a file
-	file, err := os.Create(hex.EncodeToString(witness.VKey))
+	dir, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	filePath, err := filepath.Abs(dir[:len(dir)-8] + "/test_batcher_and_relayer")
+	if err != nil {
+		return
+	}
+
+	file, err := os.Create(filePath)
 	if err != nil {
 		fmt.Println("Error creating file:", err)
 		return
 	}
 	defer file.Close()
 
-	_, err = file.Write(txBytes)
+	_, err = file.Write(bytesToWrite)
 	if err != nil {
-		fmt.Println("Error writing struct1 to file:", err)
+		fmt.Println("Error writing bytes to file:", err)
 		return
 	}
 
-	// _, err = file.Write(witnessBytes)
+	// file, err = os.Open(hex.EncodeToString(witness.VKey))
 	// if err != nil {
-	// 	fmt.Println("Error writing struct2 to file:", err)
+	// 	fmt.Println("Error reading file:", err)
+	// 	return
+	// }
+	// defer file.Close()
+
+	// // Create a buffer to read the file in chunks
+	// buffer := make([]byte, 1024) // Read 1024 bytes at a time
+
+	// // Create a slice to store the bytes read from the file
+	// var data []byte
+
+	// // Loop until the end of the file is reached
+	// for {
+	// 	// Read from the file into the buffer
+	// 	bytesRead, err := file.Read(buffer)
+	// 	if err != nil {
+	// 		// Check if the error is EOF (End of File)
+	// 		if err.Error() == "EOF" {
+	// 			break // Exit the loop when EOF is encountered
+	// 		}
+	// 		fmt.Println("Error:", err)
+	// 		return
+	// 	}
+
+	// 	// If no bytes were read, we've reached the end of the file
+	// 	if bytesRead == 0 {
+	// 		break
+	// 	}
+
+	// 	// Process the bytes read from the buffer and append them to the data slice
+	// 	data = append(data, buffer[:bytesRead]...)
+	// }
+
+	// // Unmarshal byte arrays back to structs
+	// var readStruct1 Submit
+	// err = cbor.Unmarshal(data, &readStruct1)
+	// if err != nil {
+	// 	fmt.Println("Error unmarshaling struct1:", err)
 	// 	return
 	// }
 
-	// Read from the file
-	readBytes := make([]byte, len(txBytes) /*+ len(witnessBytes)*/)
-	_, err = file.ReadAt(readBytes, 0)
-	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return
-	}
+	// // Print the read structs
+	// fmt.Println("Read transaction:", readStruct1.Transaction)
+	// fmt.Println("Read witness:", readStruct1.Witness)
 
-	// Unmarshal byte arrays back to structs
-	var readStruct1 tx.Tx
-	err = cbor.Unmarshal(readBytes[:len(txBytes)], &readStruct1)
-	if err != nil {
-		fmt.Println("Error unmarshaling struct1:", err)
-		return
-	}
-
-	// var readStruct2 tx.VKeyWitness
-	// err = cbor.Unmarshal(readBytes[len(witnessBytes):], &readStruct2)
-	// if err != nil {
-	// 	fmt.Println("Error unmarshaling struct2:", err)
-	// 	return
-	// }
-
-	// Print the read structs
-	fmt.Println("Read Struct1:", readStruct1)
-	//fmt.Println("Read Struct2:", hex.EncodeToString(readStruct2.VKey))
+	return nil
 }

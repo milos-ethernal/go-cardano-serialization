@@ -104,7 +104,7 @@ func (b *ByronAddress) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-//Pref returns the string prefix for the base address. "" for byron address since it has no prefix.
+// Pref returns the string prefix for the base address. "" for byron address since it has no prefix.
 func (b *ByronAddress) Prefix() string {
 	return ""
 }

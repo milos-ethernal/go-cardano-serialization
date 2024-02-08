@@ -49,6 +49,29 @@ func (b *BaseAddress) MarshalCBOR() ([]byte, error) {
 	return cbor.Marshal(b.Bytes())
 }
 
+// UnmarshalCBOR implements the cbor.Unmarshaler interface for BaseAddress.
+func (b *BaseAddress) UnmarshalCBOR(data []byte) error {
+	// Define a struct to decode the CBOR data into
+	var cborData struct {
+		_       struct{} `cbor:",toarray"`
+		Network network.NetworkInfo
+		Payment StakeCredential
+		Stake   StakeCredential
+	}
+
+	// Unmarshal the CBOR data into the cborData struct
+	if err := cbor.Unmarshal(data, &cborData); err != nil {
+		return err
+	}
+
+	// Set values to the BaseAddress struct
+	b.Network = cborData.Network
+	b.Payment = cborData.Payment
+	b.Stake = cborData.Stake
+
+	return nil
+}
+
 // ToEnterprise returns the Enterprise Address from the base address. This is equivalent to removing the stake part of the base address.
 func (b *BaseAddress) ToEnterprise() (addr *EnterpriseAddress) {
 	addr = NewEnterpriseAddress(

@@ -18,6 +18,7 @@ var (
 
 type Address interface {
 	cbor.Marshaler
+	cbor.Unmarshaler
 
 	// Bytes returns raw bytes for use in tx_outputs
 	Bytes() []byte

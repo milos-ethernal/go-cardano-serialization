@@ -26,3 +26,5 @@
 
 .test_mnm.txt
 .DS_Store
+
+components/test_batcher_and_relayer

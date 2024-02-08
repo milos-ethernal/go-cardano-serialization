@@ -61,6 +61,29 @@ func (p *PointerAddress) MarshalCBOR() (bytes []byte, err error) {
 	return cbor.Marshal(p.Bytes())
 }
 
+// UnmarshalCBOR implements the cbor.Unmarshaler interface for PointerAddress.
+func (p *PointerAddress) UnmarshalCBOR(data []byte) error {
+	// Define a struct to decode the CBOR data into
+	var cborData struct {
+		_       struct{} `cbor:",toarray"`
+		Network network.NetworkInfo
+		Payment StakeCredential
+		Stake   StakePointer
+	}
+
+	// Unmarshal the CBOR data into the cborData struct
+	if err := cbor.Unmarshal(data, &cborData); err != nil {
+		return err
+	}
+
+	// Set values to the PointerAddress struct
+	p.Network = cborData.Network
+	p.Payment = cborData.Payment
+	p.Stake = cborData.Stake
+
+	return nil
+}
+
 // Bytes retuns a byte slice representation of the pointer address.
 func (p *PointerAddress) Bytes() (bytes []byte) {
 	var buf []byte

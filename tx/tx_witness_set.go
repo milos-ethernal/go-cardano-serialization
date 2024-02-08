@@ -1,6 +1,9 @@
 package tx
 
+import "github.com/fxamacker/cbor/v2"
+
 type WitnessSet struct {
+	_         struct{}       `cbor:",toarray"`
 	Witnesses []VKeyWitness  `cbor:"0,keyasint,omitempty"`
 	Scripts   []NativeScript `cbor:"1,keyasint,omitempty"`
 }
@@ -13,11 +16,23 @@ func NewTXWitnessSet(scripts []NativeScript, witnesses []VKeyWitness) *WitnessSe
 	}
 }
 
+// Bytes returns a slice of cbor Marshalled bytes.
+func (ws *WitnessSet) Bytes() ([]byte, error) {
+	bytes, err := cbor.Marshal(ws)
+	return bytes, err
+}
+
 // VKeyWitness - Witness for use with Shelley based transactions
 type VKeyWitness struct {
 	_         struct{} `cbor:",toarray"`
 	VKey      []byte
 	Signature []byte
+}
+
+// Bytes returns a slice of cbor Marshalled bytes.
+func (v *VKeyWitness) Bytes() ([]byte, error) {
+	bytes, err := cbor.Marshal(v)
+	return bytes, err
 }
 
 // NewVKeyWitness creates a Witness for Shelley Based transactions from a verification key and transaction signature.
