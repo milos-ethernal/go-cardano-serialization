@@ -66,7 +66,6 @@ type scriptInvalidAfter struct {
 
 // NativeScript is a Cardano Native Script.
 type NativeScript struct {
-	_             struct{} `cbor:",toarray"`
 	Type          NativeScriptType
 	KeyHash       AddrKeyHash
 	N             uint64

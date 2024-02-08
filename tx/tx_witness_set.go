@@ -3,7 +3,6 @@ package tx
 import "github.com/fxamacker/cbor/v2"
 
 type WitnessSet struct {
-	_         struct{}       `cbor:",toarray"`
 	Witnesses []VKeyWitness  `cbor:"0,keyasint,omitempty"`
 	Scripts   []NativeScript `cbor:"1,keyasint,omitempty"`
 }

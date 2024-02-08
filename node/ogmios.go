@@ -13,8 +13,8 @@ import (
 	"github.com/fivebinaries/go-cardano-serialization/tx"
 )
 
-func NewOgmiosNode(address string) ogmiosNode {
-	return ogmiosNode{
+func NewOgmiosNode(address string) OgmiosNode {
+	return OgmiosNode{
 		address: address,
 	}
 }
@@ -22,7 +22,7 @@ func NewOgmiosNode(address string) ogmiosNode {
 // Implement Node interface
 
 // UTXOs queries the ogmios for Unspent Transaction Outputs belonging to an address.
-func (o *ogmiosNode) UTXOs(address address.Address) (txIs []tx.TxInput, err error) {
+func (o *OgmiosNode) UTXOs(address address.Address) (txIs []tx.TxInput, err error) {
 	query := queryLedgerStateUtxo{
 		Jsonrpc: "2.0",
 		Method:  "queryLedgerState/utxo",
@@ -66,7 +66,7 @@ func (o *ogmiosNode) UTXOs(address address.Address) (txIs []tx.TxInput, err erro
 	return
 }
 
-func (o *ogmiosNode) ProtocolParameters() (protocolParams protocol.Protocol, err error) {
+func (o *OgmiosNode) ProtocolParameters() (protocolParams protocol.Protocol, err error) {
 	query := queryLedgerStateProtocolParameters{
 		Jsonrpc: "2.0",
 		Method:  "queryLedgerState/protocolParameters",
@@ -114,7 +114,7 @@ func (o *ogmiosNode) ProtocolParameters() (protocolParams protocol.Protocol, err
 }
 
 // Define the function for querying tip
-func (o *ogmiosNode) QueryTip() (tip NetworkTip, err error) {
+func (o *OgmiosNode) QueryTip() (tip NetworkTip, err error) {
 	query := queryLedgerStateTip{
 		Jsonrpc: "2.0",
 		Method:  "queryLedgerState/tip",
@@ -156,7 +156,7 @@ func (o *ogmiosNode) QueryTip() (tip NetworkTip, err error) {
 }
 
 // Define the function for submitting a transaction
-func (o *ogmiosNode) SubmitTx(txCborString string) (string, error) {
+func (o *OgmiosNode) SubmitTx(txCborString string) (string, error) {
 	// Create a new HTTP client
 	client := &http.Client{}
 

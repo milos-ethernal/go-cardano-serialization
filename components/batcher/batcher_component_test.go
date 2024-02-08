@@ -63,7 +63,7 @@ func TestBatcherSubmitBatchingTxToNode(t *testing.T) {
 	transaction, err := batcher.BuildBatchingTx("prime")
 	assert.NoError(t, err)
 
-	// Multisig address witnesses 6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36
+	// Multisig address witnesses
 	witness1, err := batcher.WitnessBatchingTx(*transaction, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness1)
@@ -116,7 +116,7 @@ func TestSubmitBatchingTx(t *testing.T) {
 	witness, err := batcher.WitnessBatchingTx(*transacion, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
 	assert.NoError(t, err)
 
-	err = batcher.SubmitBatchingTx(*transacion, witness)
+	err = batcher.SubmitBatchingTx(*transacion, witness, "0")
 	assert.NoError(t, err)
 }
 

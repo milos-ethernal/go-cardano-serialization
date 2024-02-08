@@ -15,6 +15,9 @@ test-user:
 
 test-batcher:
 	$(MAKE) -C components test-batcher
+
+test-components:
+	$(MAKE) -C components test-components
 	
 all : test
 

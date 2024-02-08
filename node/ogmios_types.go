@@ -1,6 +1,6 @@
 package node
 
-type ogmiosNode struct {
+type OgmiosNode struct {
 	address string
 }
 

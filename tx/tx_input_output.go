@@ -2,7 +2,6 @@ package tx
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 
 	"github.com/fivebinaries/go-cardano-serialization/address"
@@ -112,57 +111,6 @@ func (t *TxOutput) UnmarshalCBOR(data []byte) error {
 		return errors.New("invalid amount in CBOR data for TxOutput")
 	}
 	t.Amount = uint(amount)
-
-	return nil
-}
-
-// MarshalJSON implements the json.Marshaler interface for TxOutput.
-func (t *TxOutput) MarshalJSON() ([]byte, error) {
-	// Define a map to represent the TxOutput struct in JSON format
-	outputMap := map[string]interface{}{
-		"address": t.Address,
-		"amount":  t.Amount,
-	}
-
-	// Marshal the map into JSON bytes
-	return json.Marshal(outputMap)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface for TxOutput.
-func (t *TxOutput) UnmarshalJSON(data []byte) error {
-	// Define a map to decode the JSON data
-	var outputMap map[string]interface{}
-	if err := json.Unmarshal(data, &outputMap); err != nil {
-		return err
-	}
-
-	// Check if "address" field exists in the map
-	addressJSON, ok := outputMap["address"]
-	if !ok {
-		return errors.New("missing 'address' field")
-	}
-
-	// Check if "amount" field exists in the map
-	amountJSON, ok := outputMap["amount"]
-	if !ok {
-		return errors.New("missing 'amount' field")
-	}
-
-	// Convert addressJSON to []byte
-	addressBytes, err := json.Marshal(addressJSON)
-	if err != nil {
-		return err
-	}
-
-	// Create Address from bytes using NewAddressFromBytes method
-	address, err := address.NewAddressFromBytes(addressBytes)
-	if err != nil {
-		return err
-	}
-
-	// Set values to the TxOutput struct
-	t.Address = address
-	t.Amount = amountJSON.(uint)
 
 	return nil
 }

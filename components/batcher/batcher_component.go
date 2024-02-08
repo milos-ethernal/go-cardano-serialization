@@ -2,13 +2,13 @@ package batcher
 
 import (
 	"encoding/hex"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
+	"github.com/fivebinaries/go-cardano-serialization/components"
 	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
 	"github.com/joho/godotenv"
@@ -262,18 +262,13 @@ func WitnessBatchingTx(transaction tx.Tx, pkSeed string) (witness tx.VKeyWitness
 	return
 }
 
-// UPDATETODO: Finish this method together with cbor Marshaling and Unmarshaling
-// Mocked to write to file instead to bridge chain
-func SubmitBatchingTx(transaction tx.Tx, witness tx.VKeyWitness) (err error) {
+// UPDATETODO: Submit data to bridge chain
+// Mocked to write to file instead to bridge chain for testing purposes
+// UPDATETODO: Remove id parameter when updateing
+func SubmitBatchingTx(transaction tx.Tx, witness tx.VKeyWitness, id string) (err error) {
 	transaction.WitnessSet.Witnesses = []tx.VKeyWitness{}
 
-	type Submit struct {
-		_           struct{} `cbor:",toarray"`
-		Transaction tx.Tx
-		Witness     tx.VKeyWitness
-	}
-
-	writeToFile := Submit{
+	writeToFile := components.Submit{
 		Transaction: transaction,
 		Witness:     witness,
 	}
@@ -284,75 +279,16 @@ func SubmitBatchingTx(transaction tx.Tx, witness tx.VKeyWitness) (err error) {
 	}
 
 	// Write byte arrays to a file
-	dir, err := os.Getwd()
+	file, err := os.Create(filepath.Join("/tmp", "tx_and_witness_"+id))
 	if err != nil {
-		return
-	}
-
-	filePath, err := filepath.Abs(dir[:len(dir)-8] + "/test_batcher_and_relayer")
-	if err != nil {
-		return
-	}
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		fmt.Println("Error creating file:", err)
 		return
 	}
 	defer file.Close()
 
 	_, err = file.Write(bytesToWrite)
 	if err != nil {
-		fmt.Println("Error writing bytes to file:", err)
 		return
 	}
-
-	// file, err = os.Open(hex.EncodeToString(witness.VKey))
-	// if err != nil {
-	// 	fmt.Println("Error reading file:", err)
-	// 	return
-	// }
-	// defer file.Close()
-
-	// // Create a buffer to read the file in chunks
-	// buffer := make([]byte, 1024) // Read 1024 bytes at a time
-
-	// // Create a slice to store the bytes read from the file
-	// var data []byte
-
-	// // Loop until the end of the file is reached
-	// for {
-	// 	// Read from the file into the buffer
-	// 	bytesRead, err := file.Read(buffer)
-	// 	if err != nil {
-	// 		// Check if the error is EOF (End of File)
-	// 		if err.Error() == "EOF" {
-	// 			break // Exit the loop when EOF is encountered
-	// 		}
-	// 		fmt.Println("Error:", err)
-	// 		return
-	// 	}
-
-	// 	// If no bytes were read, we've reached the end of the file
-	// 	if bytesRead == 0 {
-	// 		break
-	// 	}
-
-	// 	// Process the bytes read from the buffer and append them to the data slice
-	// 	data = append(data, buffer[:bytesRead]...)
-	// }
-
-	// // Unmarshal byte arrays back to structs
-	// var readStruct1 Submit
-	// err = cbor.Unmarshal(data, &readStruct1)
-	// if err != nil {
-	// 	fmt.Println("Error unmarshaling struct1:", err)
-	// 	return
-	// }
-
-	// // Print the read structs
-	// fmt.Println("Read transaction:", readStruct1.Transaction)
-	// fmt.Println("Read witness:", readStruct1.Witness)
 
 	return nil
 }
