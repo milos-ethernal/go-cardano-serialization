@@ -22,7 +22,7 @@ func getUsersUTXOs(chainId string, address address.Address, amount uint, potenti
 	if err != nil {
 		return
 	}
-	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
 
 	utxos, err := ogmios.UTXOs(address)
 	if err != nil {
@@ -66,7 +66,7 @@ func getProtocolParameters(chainId string) (protocolParams protocol.Protocol, er
 	if err != nil {
 		return
 	}
-	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
 	return ogmios.ProtocolParameters()
 }
 
@@ -77,7 +77,7 @@ func getSlotNumber(chainId string) (slot uint, err error) {
 		return
 	}
 
-	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
 	tip, err := ogmios.QueryTip()
 	if err != nil {
 		return
