@@ -24,11 +24,12 @@ func BuildAndSubmitBatchingTx(destinationChainId string, receivers map[string]ui
 	}
 
 	// Calculate amount for UTXO
+	minUtxoValue := uint(1000000)
 	amountSum := uint(0)
 	var receiversUTXOs []tx.TxOutput
 	var receiver address.Address
 	for addressString, amount := range receivers {
-		if amount < uint(1000000) {
+		if amount < minUtxoValue {
 			err = errors.New("receiver amount cannot be smaller than 1000000 tokens, " + addressString + ":" + fmt.Sprint(amount))
 			return
 		}
