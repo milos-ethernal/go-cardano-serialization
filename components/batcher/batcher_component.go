@@ -224,19 +224,7 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 		return
 	}
 
-	totalI, totalO := builder.GetTotalInputOutputs()
-	builder.AddOutputs(tx.NewTxOutput(
-		multisigFeeAddress,
-		uint(totalI-totalO),
-	))
-
-	// Calculate fee
-	builder.Tx().SetFee(builder.MinFee())
-
-	// Update multisig change to = input - fee - output
-	change := totalI - totalO - uint(builder.Tx().Body.Fee)
-
-	builder.Tx().Body.Outputs[len(builder.Tx().Body.Outputs)-1].Amount = change
+	builder.AddChangeIfNeeded(multisigFeeAddress)
 
 	transaction = builder.Tx()
 	return

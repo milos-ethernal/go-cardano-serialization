@@ -1,12 +1,15 @@
 package user
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/fivebinaries/go-cardano-serialization/address"
+	"github.com/fivebinaries/go-cardano-serialization/bip32"
 	"github.com/fivebinaries/go-cardano-serialization/node"
 	"github.com/fivebinaries/go-cardano-serialization/protocol"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
@@ -14,8 +17,12 @@ import (
 )
 
 // Get users available UTXOs
-func getUsersUTXOs(address address.Address, amount uint, potentialFee uint) (chosenUTXOs []*tx.TxInput, err error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
+func getUsersUTXOs(chainId string, address address.Address, amount uint, potentialFee uint) (chosenUTXOs []*tx.TxInput, err error) {
+	err = godotenv.Load()
+	if err != nil {
+		return
+	}
+	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
 
 	utxos, err := ogmios.UTXOs(address)
 	if err != nil {
@@ -54,14 +61,23 @@ func getUsersUTXOs(address address.Address, amount uint, potentialFee uint) (cho
 }
 
 // Get protocol parameters
-func getProtocolParameters() (protocol.Protocol, error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
+func getProtocolParameters(chainId string) (protocolParams protocol.Protocol, err error) {
+	err = godotenv.Load()
+	if err != nil {
+		return
+	}
+	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
 	return ogmios.ProtocolParameters()
 }
 
 // Get slot number
-func getSlotNumber() (slot uint, err error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
+func getSlotNumber(chainId string) (slot uint, err error) {
+	err = godotenv.Load()
+	if err != nil {
+		return
+	}
+
+	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
 	tip, err := ogmios.QueryTip()
 	if err != nil {
 		return
@@ -107,4 +123,24 @@ func GetChainData(chainId string) (multisigAddress string, multisigFeeAddress st
 		return
 	}
 
+}
+
+// Inteded for use in MVP version without wallet
+func SignTransaction(transacion tx.Tx, seedString string) (tx.Tx, error) {
+	seed, _ := hex.DecodeString(seedString)
+	pk, err := bip32.NewXPrv(seed)
+	if err != nil {
+		return transacion, err
+	}
+
+	txHash, err := transacion.Hash()
+	if err != nil {
+		return transacion, err
+	}
+
+	publicKey := pk.Public().PublicKey()
+	signature := pk.Sign(txHash[:])
+	transacion.WitnessSet.Witnesses = []tx.VKeyWitness{tx.NewVKeyWitness(publicKey, signature[:])}
+
+	return transacion, nil
 }

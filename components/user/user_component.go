@@ -66,7 +66,7 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	}
 
 	// Instantiate transaction builder
-	pr, err := getProtocolParameters()
+	pr, err := getProtocolParameters(chainId)
 	if err != nil {
 		return
 	}
@@ -77,7 +77,7 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	)
 
 	// Get the users UTXOs
-	utxos, err := getUsersUTXOs(senderAddress, sendAmount, potentialFee)
+	utxos, err := getUsersUTXOs(chainId, senderAddress, sendAmount, potentialFee)
 	if err != nil {
 		return
 	}
@@ -111,7 +111,7 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 
 	// Query slot from a node on the network.
 	// Slot is needed to compute TTL of transaction.
-	slot, err := getSlotNumber()
+	slot, err := getSlotNumber(chainId)
 	if err != nil {
 		return
 	}
