@@ -2,26 +2,25 @@ package batcher
 
 import (
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
-	"github.com/fivebinaries/go-cardano-serialization/components"
-	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
+	"github.com/fivebinaries/go-cardano-serialization/node"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
 	"github.com/joho/godotenv"
 )
 
-// Builds batching transaction
-func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
-	// UPDATETODO: chainId validation
+func BuildAndSubmitBatchingTx(destinationChainId string, receivers map[string]uint) (txHash string, err error) {
+	if destinationChainId != "prime" && destinationChainId != "vector" {
+		return "", errors.New("chainId not supported, supported chainIds are prime and vector")
+	}
 
-	// Get all confirmed transactions
-	receivers, err := getConfirmedTxs(destinationChain)
-	if err != nil {
-		return
+	if len(receivers) == 0 {
+		return "", errors.New("receivers map cannot be empty")
 	}
 
 	// Calculate amount for UTXO
@@ -29,6 +28,10 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 	var receiversUTXOs []tx.TxOutput
 	var receiver address.Address
 	for addressString, amount := range receivers {
+		if amount < uint(1000000) {
+			err = errors.New("receiver amount cannot be smaller than 1000000 tokens, " + addressString + ":" + fmt.Sprint(amount))
+			return
+		}
 		amountSum += amount
 
 		receiver, err = address.NewAddress(addressString)
@@ -38,56 +41,42 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 		receiversUTXOs = append(receiversUTXOs, *tx.NewTxOutput(receiver, amount))
 	}
 
-	multisigAddressString, multisigFeeAddressString, _, err := GetChainData(destinationChain)
+	err = godotenv.Load()
 	if err != nil {
 		return
 	}
 
+	bridgeControlledAddressString := os.Getenv("BRIDGE_ADDRESS_" + strings.ToUpper(destinationChainId))
+
 	// Get input UTXOs
-	inputs, err := getUTXOs(multisigAddressString, amountSum)
+	inputs, err := getUTXOs(bridgeControlledAddressString, amountSum, destinationChainId)
 	if err != nil {
 		return
 	}
 
 	// Generate batching transaction
 	// Instantiate transaction builder
-	pr, err := getProtocolParameters()
+	pr, err := getProtocolParameters(destinationChainId)
 	if err != nil {
 		return
+	}
+
+	seed, _ := hex.DecodeString(os.Getenv("BRIDGE_ADDRESS_KEY_" + strings.ToUpper(destinationChainId)))
+	pk, err := bip32.NewXPrv(seed)
+	if err != nil {
+		panic(err)
 	}
 
 	builder := tx.NewTxBuilder(
 		pr,
-		[]bip32.XPrv{},
+		[]bip32.XPrv{pk},
 	)
 
-	inputSum := uint(0)
-	for _, utxo := range inputs {
-		inputSum += utxo.Amount
-		builder.AddInputs(&utxo)
-	}
+	builder.AddInputs(inputs...)
 
-	multisigAddress, err := address.NewAddress(multisigAddressString)
+	bridgeControlledAddress, err := address.NewAddress(bridgeControlledAddressString)
 	if err != nil {
 		return
-	}
-
-	// Add change for multisig address if it exists
-	// In case of adding 0 output node throws an error on transaction submit
-	if inputSum-amountSum > 0 {
-		builder.AddOutputs(tx.NewTxOutput(
-			multisigAddress,
-			inputSum-amountSum,
-		))
-	}
-
-	// Add multisig fee input
-	feeInputs, err := getUTXOs(multisigFeeAddressString, amountSum)
-	if err != nil {
-		return
-	}
-	for _, utxo := range feeInputs {
-		builder.AddInputs(&utxo)
 	}
 
 	// Add receiver outputs
@@ -97,186 +86,29 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 
 	// Query slot from a node on the network.
 	// Slot is needed to compute TTL of transaction.
-	slot, err := getSlotNumber()
+	slot, err := getSlotNumber(destinationChainId)
 	if err != nil {
 		return
 	}
 
 	// Set TTL for 5 min into the future
 	builder.SetTTL(uint32(slot) + uint32(300))
-
-	err = godotenv.Load()
-	if err != nil {
-		return
-	}
-
-	// Create script of multisig address
-	firstSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH1"))
-	secondSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH2"))
-	thirdSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH3"))
-	fourthSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH4"))
-
-	multisigScript := tx.NativeScript{
-		Type:    3,
-		KeyHash: []byte{},
-		N:       3,
-		Scripts: []tx.NativeScript{
-			{
-				Type:          0,
-				KeyHash:       firstSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       secondSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       thirdSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       fourthSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-		},
-		IntervalValue: 0,
-	}
-
-	// Create script of fee multisig address
-	firstFeeSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_FEE_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH1"))
-	secondFeeSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_FEE_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH2"))
-	thirdFeeSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_FEE_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH3"))
-	fourthFeeSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_FEE_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH4"))
-
-	multisigFeeScript := tx.NativeScript{
-		Type:    3,
-		KeyHash: []byte{},
-		N:       3,
-		Scripts: []tx.NativeScript{
-			{
-				Type:          0,
-				KeyHash:       firstFeeSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       secondFeeSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       thirdFeeSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       fourthFeeSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-		},
-		IntervalValue: 0,
-	}
-
-	// UPDATETODO: Get this parameter from chain
-	// Add metadata batch nonce id
 	builder.Tx().AuxiliaryData = tx.NewAuxiliaryData()
+	builder.AddChangeIfNeeded(bridgeControlledAddress)
 
-	id, err := getBatchNonceId()
-	if err != nil {
-		return
-	}
-	builder.Tx().AuxiliaryData.AddMetadataElement("batch_nonce_id", id)
-
-	// Set arbitrary value for witnesses
-	for i := 0; i < (int(multisigScript.N)+1)*2; i++ {
-		vWitness := tx.NewVKeyWitness(
-			make([]byte, 32),
-			make([]byte, 64),
-		)
-		builder.Tx().WitnessSet.Witnesses = append(builder.Tx().WitnessSet.Witnesses, vWitness)
-	}
-
-	// Set multisig NativeScript
-	builder.Tx().WitnessSet.Scripts = []tx.NativeScript{multisigScript, multisigFeeScript}
-
-	// Calculate fee
-	multisigFeeAddress, err := address.NewAddress(multisigFeeAddressString)
+	txFinal, err := builder.Build()
 	if err != nil {
 		return
 	}
 
-	builder.AddChangeIfNeeded(multisigFeeAddress)
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(destinationChainId)))
 
-	transaction = builder.Tx()
-	return
-}
-
-// Witness batching transaction
-func WitnessBatchingTx(transaction tx.Tx, pkSeed string) (witness tx.VKeyWitness, err error) {
-	seed, err := hex.DecodeString(pkSeed)
+	txBytes, err := txFinal.Bytes()
 	if err != nil {
 		return
 	}
 
-	pk, err := bip32.NewXPrv(seed)
-	if err != nil {
-		return
-	}
-
-	hash, _ := transaction.Hash()
-	publicKey := pk.Public().PublicKey()
-	signature := pk.Sign(hash[:])
-	witness = tx.NewVKeyWitness(publicKey, signature[:])
+	txHash, err = ogmios.SubmitTx(hex.EncodeToString(txBytes[:]))
 
 	return
-}
-
-// UPDATETODO: Submit data to bridge chain
-// Mocked to write to file instead to bridge chain for testing purposes
-// UPDATETODO: Remove id parameter when updateing
-func SubmitBatchingTx(transaction tx.Tx, witness tx.VKeyWitness, id string) (err error) {
-	transaction.WitnessSet.Witnesses = []tx.VKeyWitness{}
-
-	writeToFile := components.Submit{
-		Transaction: transaction,
-		Witness:     witness,
-	}
-
-	bytesToWrite, err := cbor.Marshal(writeToFile)
-	if err != nil {
-		return
-	}
-
-	// Write byte arrays to a file
-	file, err := os.Create(filepath.Join("/tmp", "tx_and_witness_"+id))
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	_, err = file.Write(bytesToWrite)
-	if err != nil {
-		return
-	}
-
-	return nil
 }
