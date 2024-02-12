@@ -9,6 +9,7 @@ import (
 	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
 	"github.com/fivebinaries/go-cardano-serialization/components"
+	"github.com/fivebinaries/go-cardano-serialization/components/txhelper"
 	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
 	"github.com/joho/godotenv"
@@ -25,17 +26,9 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 	}
 
 	// Calculate amount for UTXO
-	amountSum := uint(0)
-	var receiversUTXOs []tx.TxOutput
-	var receiver address.Address
-	for addressString, amount := range receivers {
-		amountSum += amount
-
-		receiver, err = address.NewAddress(addressString)
-		if err != nil {
-			return
-		}
-		receiversUTXOs = append(receiversUTXOs, *tx.NewTxOutput(receiver, amount))
+	receiversUTXOs, err := txhelper.CreateUtxos(receivers, false)
+	if err != nil {
+		return nil, err
 	}
 
 	multisigAddressString, multisigFeeAddressString, _, err := GetChainData(destinationChain)
@@ -43,15 +36,44 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 		return
 	}
 
-	// Get input UTXOs
-	inputs, err := getUTXOs(multisigAddressString, amountSum)
+	txParamsHelper := txhelper.NewTxParamsHelper("")
+	outputsSum := txhelper.GetTxOutputsSum(receiversUTXOs)
+
+	// Get input UTXOs: currently mocked to get the UTXOs directly from chain
+	// UPDATETODO: Query data from contract
+	allUtxos, err := txParamsHelper.GetUTXOs(multisigAddressString)
+	if err != nil {
+		return
+	}
+
+	// Get input UTXOs: currently mocked to get the UTXOs directly from chain
+	// UPDATETODO: Query data from contract
+	allFeeUtxos, err := txParamsHelper.GetUTXOs(multisigFeeAddressString)
+	if err != nil {
+		return
+	}
+
+	inputs, err := txhelper.GetUTXOsForAmount(allUtxos, outputsSum, 0)
+	if err != nil {
+		return
+	}
+
+	// Add multisig fee input
+	feeInputs, err := txhelper.GetUTXOsForAmount(allFeeUtxos, outputsSum, 0)
 	if err != nil {
 		return
 	}
 
 	// Generate batching transaction
 	// Instantiate transaction builder
-	pr, err := getProtocolParameters()
+	pr, err := txParamsHelper.GetProtocolParameters()
+	if err != nil {
+		return
+	}
+
+	// Query slot from a node on the network.
+	// Slot is needed to compute TTL of transaction.
+	slot, err := txParamsHelper.GetSlotNumber()
 	if err != nil {
 		return
 	}
@@ -61,11 +83,7 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 		[]bip32.XPrv{},
 	)
 
-	inputSum := uint(0)
-	for _, utxo := range inputs {
-		inputSum += utxo.Amount
-		builder.AddInputs(&utxo)
-	}
+	builder.AddInputs(inputs...)
 
 	multisigAddress, err := address.NewAddress(multisigAddressString)
 	if err != nil {
@@ -74,32 +92,19 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 
 	// Add change for multisig address if it exists
 	// In case of adding 0 output node throws an error on transaction submit
-	if inputSum-amountSum > 0 {
+	inputSum := txhelper.GetTxInputsSum(inputs)
+	if diff := inputSum - outputsSum; diff > 0 {
 		builder.AddOutputs(tx.NewTxOutput(
 			multisigAddress,
-			inputSum-amountSum,
+			diff,
 		))
 	}
 
-	// Add multisig fee input
-	feeInputs, err := getUTXOs(multisigFeeAddressString, amountSum)
-	if err != nil {
-		return
-	}
-	for _, utxo := range feeInputs {
-		builder.AddInputs(&utxo)
-	}
+	builder.AddInputs(feeInputs...)
 
 	// Add receiver outputs
 	for _, utxo := range receiversUTXOs {
-		builder.AddOutputs(&utxo)
-	}
-
-	// Query slot from a node on the network.
-	// Slot is needed to compute TTL of transaction.
-	slot, err := getSlotNumber()
-	if err != nil {
-		return
+		builder.AddOutputs(utxo)
 	}
 
 	// Set TTL for 5 min into the future
@@ -116,42 +121,10 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 	thirdSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH3"))
 	fourthSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH4"))
 
-	multisigScript := tx.NativeScript{
-		Type:    3,
-		KeyHash: []byte{},
-		N:       3,
-		Scripts: []tx.NativeScript{
-			{
-				Type:          0,
-				KeyHash:       firstSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       secondSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       thirdSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       fourthSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-		},
-		IntervalValue: 0,
-	}
+	multisigScript := txhelper.CreateSignersScript([][]byte{
+		firstSignerKeyHash, secondSignerKeyHash,
+		thirdSignerKeyHash, fourthSignerKeyHash,
+	})
 
 	// Create script of fee multisig address
 	firstFeeSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_FEE_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH1"))
@@ -159,42 +132,10 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 	thirdFeeSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_FEE_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH3"))
 	fourthFeeSignerKeyHash, _ := hex.DecodeString(os.Getenv("MULTISIG_FEE_ADDRESS_" + strings.ToUpper(destinationChain) + "_KEYHASH4"))
 
-	multisigFeeScript := tx.NativeScript{
-		Type:    3,
-		KeyHash: []byte{},
-		N:       3,
-		Scripts: []tx.NativeScript{
-			{
-				Type:          0,
-				KeyHash:       firstFeeSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       secondFeeSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       thirdFeeSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-			{
-				Type:          0,
-				KeyHash:       fourthFeeSignerKeyHash,
-				N:             0,
-				Scripts:       []tx.NativeScript{},
-				IntervalValue: 0,
-			},
-		},
-		IntervalValue: 0,
-	}
+	multisigFeeScript := txhelper.CreateSignersScript([][]byte{
+		firstFeeSignerKeyHash, secondFeeSignerKeyHash,
+		thirdFeeSignerKeyHash, fourthFeeSignerKeyHash,
+	})
 
 	// UPDATETODO: Get this parameter from chain
 	// Add metadata batch nonce id
@@ -204,16 +145,11 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 	if err != nil {
 		return
 	}
+
 	builder.Tx().AuxiliaryData.AddMetadataElement("batch_nonce_id", id)
 
 	// Set arbitrary value for witnesses
-	for i := 0; i < (int(multisigScript.N)+1)*2; i++ {
-		vWitness := tx.NewVKeyWitness(
-			make([]byte, 32),
-			make([]byte, 64),
-		)
-		builder.Tx().WitnessSet.Witnesses = append(builder.Tx().WitnessSet.Witnesses, vWitness)
-	}
+	builder.Tx().WitnessSet.Witnesses = append(builder.Tx().WitnessSet.Witnesses, txhelper.GetDummyWitnesses((int(multisigScript.N)+1)*2)...)
 
 	// Set multisig NativeScript
 	builder.Tx().WitnessSet.Scripts = []tx.NativeScript{multisigScript, multisigFeeScript}
@@ -226,28 +162,7 @@ func BuildBatchingTx(destinationChain string) (transaction *tx.Tx, err error) {
 
 	builder.AddChangeIfNeeded(multisigFeeAddress)
 
-	transaction = builder.Tx()
-	return
-}
-
-// Witness batching transaction
-func WitnessBatchingTx(transaction tx.Tx, pkSeed string) (witness tx.VKeyWitness, err error) {
-	seed, err := hex.DecodeString(pkSeed)
-	if err != nil {
-		return
-	}
-
-	pk, err := bip32.NewXPrv(seed)
-	if err != nil {
-		return
-	}
-
-	hash, _ := transaction.Hash()
-	publicKey := pk.Public().PublicKey()
-	signature := pk.Sign(hash[:])
-	witness = tx.NewVKeyWitness(publicKey, signature[:])
-
-	return
+	return builder.Tx(), err
 }
 
 // UPDATETODO: Submit data to bridge chain

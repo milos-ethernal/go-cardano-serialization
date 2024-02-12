@@ -3,87 +3,22 @@ package user
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
-	"github.com/fivebinaries/go-cardano-serialization/node"
-	"github.com/fivebinaries/go-cardano-serialization/protocol"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
 	"github.com/joho/godotenv"
 )
 
-// Get users available UTXOs
-func getUsersUTXOs(chainId string, address address.Address, amount uint, potentialFee uint) (chosenUTXOs []*tx.TxInput, err error) {
-	err = godotenv.Load()
-	if err != nil {
-		return
-	}
-	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
-
-	utxos, err := ogmios.UTXOs(address)
-	if err != nil {
-		return []*tx.TxInput{}, err
-	}
-
-	// Loop through utxos to find first input with enough tokens
-	// If we don't have this UTXO we need to use more of them
-	var amountSum = uint(0)
-	var minUtxoValue = uint(1000000)
-
-	for _, utxo := range utxos {
-		if utxo.Amount >= amount+potentialFee+minUtxoValue {
-			chosenUTXOs = []*tx.TxInput{&utxo}
-			break
-		}
-
-		amountSum += utxo.Amount
-		chosenUTXOs = append(chosenUTXOs, &tx.TxInput{
-			Marshaler: nil,
-			TxHash:    utxo.TxHash,
-			Index:     utxo.Index,
-			Amount:    utxo.Amount,
-		})
-
-		if amountSum >= amount+potentialFee+minUtxoValue {
-			break
-		}
-	}
-
-	if amountSum < amount+potentialFee+minUtxoValue {
-		err = errors.New("no enough available funds for generating transaction " + fmt.Sprint(amountSum) + " available but " + fmt.Sprint(amount+potentialFee+minUtxoValue) + " required")
-		return
-	}
-	return
-}
-
 // Get protocol parameters
-func getProtocolParameters(chainId string) (protocolParams protocol.Protocol, err error) {
-	err = godotenv.Load()
-	if err != nil {
-		return
-	}
-	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
-	return ogmios.ProtocolParameters()
-}
-
-// Get slot number
-func getSlotNumber(chainId string) (slot uint, err error) {
-	err = godotenv.Load()
-	if err != nil {
-		return
+func getNodeUrl(chainId string) (string, error) {
+	if err := godotenv.Load(); err != nil {
+		return "", err
 	}
 
-	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
-	tip, err := ogmios.QueryTip()
-	if err != nil {
-		return
-	}
-	slot = tip.Slot
-	return
+	return os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)), nil
 }
 
 // Get neccessary data for transaction creation

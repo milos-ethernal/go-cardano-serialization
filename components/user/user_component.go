@@ -5,6 +5,7 @@ import (
 
 	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
+	"github.com/fivebinaries/go-cardano-serialization/components/txhelper"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
 )
 
@@ -14,8 +15,7 @@ import (
 
 func CreateBridgingTransaction(sender string, chainId string, receiversAndAmounts map[string]uint) (transaction tx.Tx, err error) {
 	if sender == "" {
-		err = errors.New("sender address cannot be empty string")
-		return
+		return tx.Tx{}, errors.New("sender address cannot be empty string")
 	}
 
 	// UPDATETODO: This function panics - potentialy handle better
@@ -25,8 +25,7 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	}
 
 	if chainId == "" {
-		err = errors.New("chainId cannot be empty string")
-		return
+		return tx.Tx{}, errors.New("chainId cannot be empty string")
 	}
 
 	multisigAddressString, multisigFeeAddressString, multisigFee, err := GetChainData(chainId)
@@ -35,8 +34,7 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	}
 
 	if len(receiversAndAmounts) == 0 {
-		err = errors.New("no receivers defined")
-		return
+		return tx.Tx{}, errors.New("no receivers defined")
 	}
 
 	// Validaton:
@@ -48,25 +46,36 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	// UPDATETODO: MinUtxoValue in protocol parameters doesn't match the real value,
 	// currently on preview testnet minUtxoValue is null, but realy it is "hidden".
 	// It can be calculated as: minUTxoVal = (160 + sizeInBytes (TxOut)) * coinsPerUTxOByte
-	minUtxoValue := uint(1000000)
-	sendAmount := uint(0) + multisigFee
-	potentialFee := uint(200000)
-	for receiverAddress, amount := range receiversAndAmounts {
-		_, err = address.NewAddress(receiverAddress)
-		if err != nil {
-			return
-		}
-
-		if amount < minUtxoValue {
-			err = errors.New("receivers amount cannot be under 1000000 tokens")
-			return
-		}
-
-		sendAmount += amount
+	sendAmount, err := txhelper.GetSumFromRecipients(receiversAndAmounts)
+	if err != nil {
+		return tx.Tx{}, err
 	}
 
+	sendAmount += multisigFee
+
+	const potentialFee = uint(200000)
+
+	nodeUrl, err := getNodeUrl(chainId)
+	if err != nil {
+		return tx.Tx{}, err
+	}
+
+	txParamsHelper := txhelper.NewTxParamsHelper(nodeUrl)
+
 	// Instantiate transaction builder
-	pr, err := getProtocolParameters(chainId)
+	pr, err := txParamsHelper.GetProtocolParameters()
+	if err != nil {
+		return
+	}
+
+	// Query slot from a node on the network.
+	// Slot is needed to compute TTL of transaction.
+	slot, err := txParamsHelper.GetSlotNumber()
+	if err != nil {
+		return
+	}
+
+	allUtxos, err := txParamsHelper.GetUTXOs(senderAddress.String())
 	if err != nil {
 		return
 	}
@@ -77,7 +86,7 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	)
 
 	// Get the users UTXOs
-	utxos, err := getUsersUTXOs(chainId, senderAddress, sendAmount, potentialFee)
+	utxos, err := txhelper.GetUTXOsForAmount(allUtxos, sendAmount, potentialFee)
 	if err != nil {
 		return
 	}
@@ -104,17 +113,11 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	if err != nil {
 		return
 	}
+
 	builder.AddOutputs(tx.NewTxOutput(
 		multisigAddress,
 		uint(sendAmount),
 	))
-
-	// Query slot from a node on the network.
-	// Slot is needed to compute TTL of transaction.
-	slot, err := getSlotNumber(chainId)
-	if err != nil {
-		return
-	}
 
 	// Set TTL for 5 min into the future
 	builder.SetTTL(uint32(slot) + uint32(300))
@@ -124,10 +127,5 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	builder.AddChangeIfNeeded(senderAddress)
 
 	// Build transaction
-	transaction, err = builder.Build()
-	if err != nil {
-		return
-	}
-
-	return
+	return builder.Build()
 }

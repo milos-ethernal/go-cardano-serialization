@@ -5,10 +5,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/fivebinaries/go-cardano-serialization/address"
-	"github.com/fivebinaries/go-cardano-serialization/node"
-	"github.com/fivebinaries/go-cardano-serialization/protocol"
-	"github.com/fivebinaries/go-cardano-serialization/tx"
 	"github.com/joho/godotenv"
 )
 
@@ -21,60 +17,6 @@ func getConfirmedTxs(destinationChain string) (receivers map[string]uint, err er
 
 func getBatchNonceId() (uint, error) {
 	return 1, nil
-}
-
-// Currently mocked to get the UTXOs directly from chain
-// UPDATETODO: Query data from contract
-func getUTXOs(addressString string, amount uint) (chosenUTXOs []tx.TxInput, err error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
-
-	senderAddress, err := address.NewAddress(addressString)
-	if err != nil {
-		return
-	}
-
-	utxos, err := ogmios.UTXOs(senderAddress)
-	if err != nil {
-		return []tx.TxInput{}, err
-	}
-
-	// Loop through utxos to find first input with enough tokens
-	// If we don't have this UTXO we need to use more of them
-	var amountSum = uint(0)
-	var minUtxoValue = uint(1000000)
-
-	for _, utxo := range utxos {
-		if utxo.Amount == amount || utxo.Amount >= amount+minUtxoValue {
-			chosenUTXOs = []tx.TxInput{utxo}
-			break
-		}
-
-		amountSum += utxo.Amount
-		chosenUTXOs = append(chosenUTXOs, utxo)
-
-		if amountSum == amount || amountSum >= amount+minUtxoValue {
-			break
-		}
-	}
-
-	return
-}
-
-// Get protocol parameters
-func getProtocolParameters() (protocol.Protocol, error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
-	return ogmios.ProtocolParameters()
-}
-
-// Get slot number
-func getSlotNumber() (slot uint, err error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
-	tip, err := ogmios.QueryTip()
-	if err != nil {
-		return
-	}
-	slot = tip.Slot
-	return
 }
 
 // Get neccessary data for transaction creation
@@ -113,5 +55,4 @@ func GetChainData(chainId string) (multisigAddress string, multisigFeeAddress st
 		err = errors.New("unsupported chainId, supported chainIds are prime and vector")
 		return
 	}
-
 }

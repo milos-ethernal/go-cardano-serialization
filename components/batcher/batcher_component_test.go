@@ -8,6 +8,7 @@ import (
 	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/bip32"
 	"github.com/fivebinaries/go-cardano-serialization/components/batcher"
+	"github.com/fivebinaries/go-cardano-serialization/components/txhelper"
 	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
 	"github.com/fivebinaries/go-cardano-serialization/node"
 	"github.com/fivebinaries/go-cardano-serialization/tx"
@@ -42,7 +43,7 @@ func TestBatcherWitnessBatchingTx(t *testing.T) {
 	transacion, err := batcher.BuildBatchingTx("vector")
 	assert.NoError(t, err)
 
-	witness, err := batcher.WitnessBatchingTx(*transacion, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
+	witness, err := txhelper.CreateWitness(transacion, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
 	assert.NoError(t, err)
 
 	seed, _ := hex.DecodeString("6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
@@ -64,36 +65,36 @@ func TestBatcherSubmitBatchingTxToNode(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Multisig address witnesses
-	witness1, err := batcher.WitnessBatchingTx(*transaction, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
+	witness1, err := txhelper.CreateWitness(transaction, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness1)
 
-	witness2, err := batcher.WitnessBatchingTx(*transaction, "d7faba3a4686fc6928b15a9834c3928ad2a9fe12b1409fdff741241c17fd0161")
+	witness2, err := txhelper.CreateWitness(transaction, "d7faba3a4686fc6928b15a9834c3928ad2a9fe12b1409fdff741241c17fd0161")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness2)
 
-	witness3, err := batcher.WitnessBatchingTx(*transaction, "38ab88c5cf12f5251a3b6ba3c5af2379c0c7ee26ed15de90b2c497ac5a6619a5")
+	witness3, err := txhelper.CreateWitness(transaction, "38ab88c5cf12f5251a3b6ba3c5af2379c0c7ee26ed15de90b2c497ac5a6619a5")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness3)
 
-	witness4, err := batcher.WitnessBatchingTx(*transaction, "1352739ad43e23d729b0d3f502804238f66cb65a5779f7082b9605c6dc24c664")
+	witness4, err := txhelper.CreateWitness(transaction, "1352739ad43e23d729b0d3f502804238f66cb65a5779f7082b9605c6dc24c664")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness4)
 
 	// Multisig fee address witnesses
-	witness5, err := batcher.WitnessBatchingTx(*transaction, "764c456698239d796e23029e381fb7b2b3f6fd84eb6c7898e34fa444a51eba00")
+	witness5, err := txhelper.CreateWitness(transaction, "764c456698239d796e23029e381fb7b2b3f6fd84eb6c7898e34fa444a51eba00")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness5)
 
-	witness6, err := batcher.WitnessBatchingTx(*transaction, "16f80fb0f3a1ea17585ebf18e78d2a0d306837ff51d0d63ee94e464bf4b88de6")
+	witness6, err := txhelper.CreateWitness(transaction, "16f80fb0f3a1ea17585ebf18e78d2a0d306837ff51d0d63ee94e464bf4b88de6")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness6)
 
-	witness7, err := batcher.WitnessBatchingTx(*transaction, "669725b0d4dede84ceb60adbdd7121f0fde3ffcdbc753afe9833fadc40caee30")
+	witness7, err := txhelper.CreateWitness(transaction, "669725b0d4dede84ceb60adbdd7121f0fde3ffcdbc753afe9833fadc40caee30")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness7)
 
-	witness8, err := batcher.WitnessBatchingTx(*transaction, "71343859f289a2d604db09e2d383271122a7760bb0d50d09c1e1028ce0181636")
+	witness8, err := txhelper.CreateWitness(transaction, "71343859f289a2d604db09e2d383271122a7760bb0d50d09c1e1028ce0181636")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, witness8)
 
@@ -113,7 +114,7 @@ func TestSubmitBatchingTx(t *testing.T) {
 	transacion, err := batcher.BuildBatchingTx("vector")
 	assert.NoError(t, err)
 
-	witness, err := batcher.WitnessBatchingTx(*transacion, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
+	witness, err := txhelper.CreateWitness(transacion, "6fbeede8a55f740152a307b6c3b3e6c787e34174c79cebde544504b2ee758a36")
 	assert.NoError(t, err)
 
 	err = batcher.SubmitBatchingTx(*transacion, witness, "0")
