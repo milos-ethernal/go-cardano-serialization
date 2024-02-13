@@ -36,6 +36,7 @@ func getUsersUTXOs(chainId string, address address.Address, amount uint, potenti
 
 	for _, utxo := range utxos {
 		if utxo.Amount >= amount+potentialFee+minUtxoValue {
+			amountSum = utxo.Amount
 			chosenUTXOs = []*tx.TxInput{&utxo}
 			break
 		}
