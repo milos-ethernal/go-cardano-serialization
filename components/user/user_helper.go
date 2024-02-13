@@ -22,7 +22,7 @@ func getUsersUTXOs(chainId string, address address.Address, amount uint, potenti
 	if err != nil {
 		return
 	}
-	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
 
 	utxos, err := ogmios.UTXOs(address)
 	if err != nil {
@@ -66,7 +66,7 @@ func getProtocolParameters(chainId string) (protocolParams protocol.Protocol, er
 	if err != nil {
 		return
 	}
-	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
 	return ogmios.ProtocolParameters()
 }
 
@@ -77,7 +77,7 @@ func getSlotNumber(chainId string) (slot uint, err error) {
 		return
 	}
 
-	ogmios := node.NewOgmiosNode(os.Getenv("MULTISIG_ADDRESS_" + strings.ToUpper(chainId)))
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
 	tip, err := ogmios.QueryTip()
 	if err != nil {
 		return
@@ -126,21 +126,34 @@ func GetChainData(chainId string) (multisigAddress string, multisigFeeAddress st
 }
 
 // Inteded for use in MVP version without wallet
-func SignTransaction(transacion tx.Tx, seedString string) (tx.Tx, error) {
+func SignAndSubmitTransaction(transaction tx.Tx, seedString string, destinationChainId string) (string, error) {
 	seed, _ := hex.DecodeString(seedString)
 	pk, err := bip32.NewXPrv(seed)
 	if err != nil {
-		return transacion, err
+		return "", err
 	}
 
-	txHash, err := transacion.Hash()
+	txHash, err := transaction.Hash()
 	if err != nil {
-		return transacion, err
+		return "", err
 	}
 
 	publicKey := pk.Public().PublicKey()
 	signature := pk.Sign(txHash[:])
-	transacion.WitnessSet.Witnesses = []tx.VKeyWitness{tx.NewVKeyWitness(publicKey, signature[:])}
+	transaction.WitnessSet.Witnesses = []tx.VKeyWitness{tx.NewVKeyWitness(publicKey, signature[:])}
 
-	return transacion, nil
+	err = godotenv.Load()
+	if err != nil {
+		return "", err
+	}
+
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(destinationChainId)))
+
+	txBytes, err := transaction.Bytes()
+	if err != nil {
+		return "", nil
+	}
+
+	submitedTxHash, err := ogmios.SubmitTx(hex.EncodeToString(txBytes[:]))
+	return submitedTxHash, err
 }
