@@ -32,7 +32,7 @@ func TestReceiverLessThan1000000Tokens(t *testing.T) {
 }
 
 func TestSubmitTx(t *testing.T) {
-	txHash, err := batcher.BuildAndSubmitBatchingTx("prime", map[string]uint{"addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl": 1000000})
+	txHash, err := batcher.BuildAndSubmitBatchingTx("vector", map[string]uint{"addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl": 1000000})
 	assert.NoError(t, err)
 	fmt.Println(txHash)
 }

@@ -54,8 +54,7 @@ func getUTXOs(addressString string, amount uint, chainId string) (chosenUTXOs []
 	var minUtxoValue = uint(1000000)
 
 	for _, utxo := range utxos {
-		if utxo.Amount == amount+uint(potentialFee) || utxo.Amount >= amount+minUtxoValue+uint(potentialFee) {
-			println("here")
+		if utxo.Amount == amount+minUtxoValue+uint(potentialFee) || utxo.Amount >= amount+minUtxoValue+uint(potentialFee) {
 			chosenUTXOs = []*tx.TxInput{&utxo}
 			break
 		}
@@ -68,7 +67,7 @@ func getUTXOs(addressString string, amount uint, chainId string) (chosenUTXOs []
 			Amount:    utxo.Amount,
 		})
 
-		if amountSum == amount+uint(potentialFee) || amountSum >= amount+minUtxoValue+uint(potentialFee) {
+		if amountSum == amount+minUtxoValue+uint(potentialFee) || amountSum >= amount+minUtxoValue+uint(potentialFee) {
 			break
 		}
 	}
