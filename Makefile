@@ -18,6 +18,9 @@ test-batcher:
 
 test-components:
 	$(MAKE) -C components test-components
+
+test-e2e:
+	$(MAKE) -C e2e test-e2e
 	
 all : test
 

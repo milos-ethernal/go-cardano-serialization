@@ -28,3 +28,4 @@
 .DS_Store
 
 components/test_batcher_and_relayer
+e2e/logs/

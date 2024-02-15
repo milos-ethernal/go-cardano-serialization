@@ -1,0 +1,20 @@
+name: Test
+
+on: workflow_dispatch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+    
+    - name: Install Cardano tools
+      uses: input-output-hk/cardano-tools-action@latest
+
+    - name: Test
+      run: make test-e2e

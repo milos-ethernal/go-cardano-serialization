@@ -1,19 +1,6 @@
 name: Test
 
-on:
-  push:
-    branches: 
-      - main
-      - master
-      - feat**
-      - test**
-      - docs**
-      - ref**
-  pull_request:
-    branches:
-      - master
-      - main
-      - develop
+on: workflow_dispatch
 
 jobs:
   test:
