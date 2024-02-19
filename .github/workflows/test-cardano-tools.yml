@@ -1,0 +1,29 @@
+name: Test
+
+on: 
+  push:
+    branches:
+      - "test-e2e"  
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.20'
+    
+    - name: Install Cardano tools
+      uses: Qafana/cardano-tools-action@v1
+
+    - name: Node version
+      run: cardano-node --version
+
+    - name: CLI version
+      run: cardano-cli --version
+
+    
