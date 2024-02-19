@@ -402,7 +402,7 @@ func (c *TestCardanoCluster) WaitForBlockWithState(n uint64, timeout time.Durati
 	countRunningServers := c.RunningServersCount()
 	blockState := make(map[uint64]map[int]string, countRunningServers)
 
-	return c.WaitUntil(timeout, time.Millisecond*200, func() (bool, error) {
+	return c.WaitUntil(timeout, time.Second*1, func() (bool, error) {
 		blocks, ready, err := c.Stats()
 		if err != nil {
 			return false, err
@@ -454,6 +454,117 @@ func (c *TestCardanoCluster) WaitForBlockWithState(n uint64, timeout time.Durati
 
 		return false, nil
 	})
+}
+
+func (c *TestCardanoCluster) StartOgmiosOnNode(port uint) error {
+	var b bytes.Buffer
+
+	node_socket := c.GetSockets()[0]
+	node_config := c.Config.Dir("configuration.yaml")
+
+	args := []string{
+		"--port", fmt.Sprint(port),
+		"--node-socket", node_socket,
+		"--node-config", node_config,
+	}
+	stdOut := c.Config.GetStdout("ogmios", &b)
+
+	return c.runCommand("ogmios", args, stdOut)
+
+}
+
+func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
+	var b bytes.Buffer
+
+	var files []string = []string{"utxo1", "utxo2", "utxo3"}
+
+	for _, file := range files {
+		utxovkey := c.Config.Dir(fmt.Sprintf("utxo-keys/%s.vkey", file))
+		utxoaddress := c.Config.Dir(fmt.Sprintf("utxo-keys/%s.addr", file))
+		net_prefix := c.Config.NetworkMagic
+
+		args := []string{
+			"address", "build",
+			"--verification-key-file", utxovkey,
+			"--out-file", utxoaddress,
+			"--testnet-magic", strconv.Itoa(net_prefix),
+		}
+		stdOut := c.Config.GetStdout("env-variables", &b)
+
+		err := c.runCommand(c.Config.Binary, args, stdOut)
+		if err != nil {
+			return err
+		}
+	}
+
+	// set utxo1.addr as a SENDER_ADDRESS_CHAINID
+	// set utxo1.skey as a SENDER_KEY_CHAINID
+	utxo1skey := c.Config.Dir("utxo-keys/utxo1.skey")
+	utxo1address := c.Config.Dir("utxo-keys/utxo1.addr")
+
+	args := []string{
+		utxo1address,
+	}
+	stdOut := c.Config.GetStdout("env-variables", &b)
+	err := c.runCommand("cat", args, stdOut)
+	if err != nil {
+		return err
+	}
+
+	os.Setenv(fmt.Sprintf("SENDER_ADDRESS_%s", chainId), b.String())
+
+	b.Reset()
+
+	args = []string{
+		"-c",
+		fmt.Sprintf("cat %s | jq -r .cborHex | cut -c 5-", utxo1skey),
+	}
+	stdOut = c.Config.GetStdout("env-variables", &b)
+	err = c.runCommand("bash", args, stdOut)
+	if err != nil {
+		return err
+	}
+
+	os.Setenv(fmt.Sprintf("SENDER_KEY_%s", chainId), b.String())
+
+	// set utxo3.addr as a MULTISIG_ADDRESS_CHAINID
+	//					   MULTISIG_FEE_ADDRESS_CHAINID
+	//					   BRIDGE_ADDRESS_CHAINID
+	//
+	// set utxo3.skey as a BRIDGE_ADDRESS_KEY_CHAINID
+	utxo3skey := c.Config.Dir("utxo-keys/utxo3.skey")
+	utxo3address := c.Config.Dir("utxo-keys/utxo3.addr")
+
+	b.Reset()
+
+	args = []string{
+		utxo3address,
+	}
+	stdOut = c.Config.GetStdout("env-variables", &b)
+	err = c.runCommand("cat", args, stdOut)
+	if err != nil {
+		return err
+	}
+
+	os.Setenv(fmt.Sprintf("MULTISIG_ADDRESS_%s", chainId), b.String())
+	os.Setenv(fmt.Sprintf("MULTISIG_FEE_ADDRESS_%s", chainId), b.String())
+	os.Setenv(fmt.Sprintf("BRIDGE_ADDRESS_%s", chainId), b.String())
+
+	b.Reset()
+
+	args = []string{
+		"-c",
+		fmt.Sprintf("cat %s | jq -r .cborHex | cut -c 5-", utxo3skey),
+	}
+	stdOut = c.Config.GetStdout("env-variables", &b)
+	err = c.runCommand("bash", args, stdOut)
+	if err != nil {
+		return err
+	}
+
+	os.Setenv(fmt.Sprintf("BRIDGE_ADDRESS_KEY_%s", chainId), b.String())
+
+	return nil
 }
 
 // runCommand executes command with given arguments
