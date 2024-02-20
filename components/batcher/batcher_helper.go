@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fivebinaries/go-cardano-serialization/node"
@@ -25,8 +26,13 @@ func getBatchNonceId() (uint, error) {
 
 // Currently mocked to get the UTXOs directly from chain
 // UPDATETODO: Query data from contract
-func getUTXOs(addressString string, amount uint) (chosenUTXOs []tx.TxInput, err error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
+func getUTXOs(addressString string, amount uint, chainId string) (chosenUTXOs []*tx.TxInput, err error) {
+	err = godotenv.Load()
+	if err != nil {
+		return
+	}
+
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
 
 	senderAddress, err := address.NewAddress(addressString)
 	if err != nil {
@@ -35,24 +41,33 @@ func getUTXOs(addressString string, amount uint) (chosenUTXOs []tx.TxInput, err 
 
 	utxos, err := ogmios.UTXOs(senderAddress)
 	if err != nil {
-		return []tx.TxInput{}, err
+		return []*tx.TxInput{}, err
 	}
 
 	// Loop through utxos to find first input with enough tokens
 	// If we don't have this UTXO we need to use more of them
+	potentialFee, err := strconv.ParseUint(os.Getenv("POTENTIAL_FEE"), 10, 64)
+	if err != nil {
+		return
+	}
 	var amountSum = uint(0)
 	var minUtxoValue = uint(1000000)
 
 	for _, utxo := range utxos {
-		if utxo.Amount == amount || utxo.Amount >= amount+minUtxoValue {
-			chosenUTXOs = []tx.TxInput{utxo}
+		if utxo.Amount == amount+minUtxoValue+uint(potentialFee) || utxo.Amount >= amount+minUtxoValue+uint(potentialFee) {
+			chosenUTXOs = []*tx.TxInput{&utxo}
 			break
 		}
 
 		amountSum += utxo.Amount
-		chosenUTXOs = append(chosenUTXOs, utxo)
+		chosenUTXOs = append(chosenUTXOs, &tx.TxInput{
+			Marshaler: nil,
+			TxHash:    utxo.TxHash,
+			Index:     utxo.Index,
+			Amount:    utxo.Amount,
+		})
 
-		if amountSum == amount || amountSum >= amount+minUtxoValue {
+		if amountSum == amount+minUtxoValue+uint(potentialFee) || amountSum >= amount+minUtxoValue+uint(potentialFee) {
 			break
 		}
 	}
@@ -61,14 +76,25 @@ func getUTXOs(addressString string, amount uint) (chosenUTXOs []tx.TxInput, err 
 }
 
 // Get protocol parameters
-func getProtocolParameters() (protocol.Protocol, error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
-	return ogmios.ProtocolParameters()
+func getProtocolParameters(chainId string) (protocolParams protocol.Protocol, err error) {
+	err = godotenv.Load()
+	if err != nil {
+		return
+	}
+
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
+	protocolParams, err = ogmios.ProtocolParameters()
+	return
 }
 
 // Get slot number
-func getSlotNumber() (slot uint, err error) {
-	ogmios := node.NewOgmiosNode("http://localhost:1337")
+func getSlotNumber(chainId string) (slot uint, err error) {
+	err = godotenv.Load()
+	if err != nil {
+		return
+	}
+
+	ogmios := node.NewOgmiosNode(os.Getenv("OGMIOS_NODE_ADDRESS_" + strings.ToUpper(chainId)))
 	tip, err := ogmios.QueryTip()
 	if err != nil {
 		return

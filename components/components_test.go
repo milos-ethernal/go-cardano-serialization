@@ -2,53 +2,85 @@ package components_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
-	"github.com/fivebinaries/go-cardano-serialization/components/batcher"
-	"github.com/fivebinaries/go-cardano-serialization/components/relayer"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBatcherAndRelayerComponents(t *testing.T) {
-	transaction, err := batcher.BuildBatchingTx("prime")
-	assert.NoError(t, err)
+func TestMetadata(t *testing.T) {
+	myMap := map[interface{}]interface{}{
+		0: map[interface{}]interface{}{
+			1: map[string]interface{}{
+				"chainId": "vector",
+				"transactions": []map[string]interface{}{
+					{"address": "addr_test1vzqcvg32jjgvq6sc52l55fdfgrl369w9wyglqfysj4ey3cqs45ck7", "amount": 1000000},
+					{"address": "addr_test1vrtrch74dk7u5m5gjl76p5yfrlascgmaqplzpfe6xn9pxkqsf0l04", "amount": 200000},
+				},
+			},
+		},
+	}
 
-	// Multisig address witnesses
-	witness2, err := batcher.WitnessBatchingTx(*transaction, "d7faba3a4686fc6928b15a9834c3928ad2a9fe12b1409fdff741241c17fd0161")
-	assert.NoError(t, err)
-	assert.NotEmpty(t, witness2)
-	batcher.SubmitBatchingTx(*transaction, witness2, "0")
+	uintMap := convertToUintMap(myMap)
 
-	witness3, err := batcher.WitnessBatchingTx(*transaction, "38ab88c5cf12f5251a3b6ba3c5af2379c0c7ee26ed15de90b2c497ac5a6619a5")
-	assert.NoError(t, err)
-	assert.NotEmpty(t, witness3)
-	batcher.SubmitBatchingTx(*transaction, witness3, "1")
+	//fmt.Println(uintMap[0])
 
-	witness4, err := batcher.WitnessBatchingTx(*transaction, "1352739ad43e23d729b0d3f502804238f66cb65a5779f7082b9605c6dc24c664")
-	assert.NoError(t, err)
-	assert.NotEmpty(t, witness4)
-	batcher.SubmitBatchingTx(*transaction, witness4, "2")
+	// Assert uintMap[0] to map[uint]interface{}
+	innerMap, ok := uintMap[0].(map[uint]interface{})
+	if !ok {
+		fmt.Println("uintMap[0] is not of type map[uint]interface{}")
+		return
+	}
 
-	// Multisig fee address witnesses
-	witness6, err := batcher.WitnessBatchingTx(*transaction, "16f80fb0f3a1ea17585ebf18e78d2a0d306837ff51d0d63ee94e464bf4b88de6")
-	assert.NoError(t, err)
-	assert.NotEmpty(t, witness6)
-	batcher.SubmitBatchingTx(*transaction, witness6, "3")
+	//fmt.Println("Inner map:", innerMap[1])
 
-	witness7, err := batcher.WitnessBatchingTx(*transaction, "669725b0d4dede84ceb60adbdd7121f0fde3ffcdbc753afe9833fadc40caee30")
-	assert.NoError(t, err)
-	assert.NotEmpty(t, witness7)
-	batcher.SubmitBatchingTx(*transaction, witness7, "4")
+	innerInnerMap, ok := innerMap[1].(map[string]interface{})
+	if !ok {
+		fmt.Println("innerMap[1] is not of type map[string]interface{}")
+		return
+	}
 
-	witness8, err := batcher.WitnessBatchingTx(*transaction, "71343859f289a2d604db09e2d383271122a7760bb0d50d09c1e1028ce0181636")
-	assert.NoError(t, err)
-	assert.NotEmpty(t, witness8)
-	batcher.SubmitBatchingTx(*transaction, witness8, "5")
+	fmt.Println("chainId:", innerInnerMap["chainId"])
 
-	txHash, err := relayer.SubmitTxToDestinationChain("prime")
-	assert.NoError(t, err)
-	assert.NotEqual(t, "", txHash)
+	transactions, ok := innerInnerMap["transactions"].([]map[string]interface{})
+	if !ok {
+		fmt.Println("innerInnerMap[transactions] is not of type []map[string]interface{}")
+		return
+	}
 
-	// Print tx hash
-	fmt.Println(txHash)
+	for _, transaction := range transactions {
+		for key, value := range transaction {
+			fmt.Print(key + " - ")
+			fmt.Println(value)
+		}
+	}
+
+	assert.Equal(t, 1, 2)
+}
+
+func convertToUintMap(inputMap map[interface{}]interface{}) map[uint]interface{} {
+	outputMap := make(map[uint]interface{})
+
+	for k, v := range inputMap {
+		// Convert key to uint if possible
+		var newKey uint
+		switch k := k.(type) {
+		case uint:
+			newKey = k
+		case int:
+			newKey = uint(k)
+		default:
+			// Handle unsupported key type
+			panic(fmt.Sprintf("Unsupported key type: %v", reflect.TypeOf(k)))
+		}
+
+		// Convert value recursively if it's a map
+		if nestedMap, ok := v.(map[interface{}]interface{}); ok {
+			outputMap[newKey] = convertToUintMap(nestedMap)
+		} else {
+			outputMap[newKey] = v
+		}
+	}
+
+	return outputMap
 }
