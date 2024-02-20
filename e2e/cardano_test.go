@@ -17,14 +17,16 @@ import (
 // Add directory where unpacked files are located to the $PATH (in example bellow `~/Apps/cardano`)
 // eq add line `export PATH=$PATH:~/Apps/cardano` to  `~/.bashrc`
 func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
+	t.Parallel()
 	const (
 		clusterCnt = 2
 	)
 
 	var (
-		errors      [clusterCnt]error
-		wg          sync.WaitGroup
-		baseLogsDir string = path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().Unix()), t.Name())
+		errors [clusterCnt]error
+		wg     sync.WaitGroup
+		// baseLogsDir string = path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().Unix()), t.Name())
+		baseLogsDir string = path.Join("../..", "e2e-logs-cardano")
 	)
 
 	for i := 0; i < clusterCnt; i++ {
@@ -62,11 +64,6 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 
 			t.Log("Waiting for blocks", "id", id+1)
 
-			// Blocks WaitForBlockWithState from stoping when desired number of blocks is reached
-			// if errors[id] = cluster.StartOgmiosOnNode(uint((id+1)*1000 + 300)); errors[id] != nil {
-			// 	return
-			// }
-
 			if id == 0 {
 				err = cluster.SetEnvVariables("PRIME")
 				if err != nil {
@@ -79,13 +76,17 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 				}
 			}
 
-			errors[id] = cluster.WaitForBlockWithState(5, time.Second*200)
+			// Blocks WaitForBlockWithState from stoping when desired number of blocks is reached
+			if errors[id] = cluster.StartOgmiosOnNode(uint((id+1)*1000 + 300)); errors[id] != nil {
+				return
+			}
+
+			errors[id] = cluster.WaitForBlockWithState(300, time.Hour*1)
 		}()
 	}
 
 	wg.Wait()
 
-	// Do the transactions here
 	fmt.Print("sender address on prime = ")
 	fmt.Println(os.Getenv("SENDER_ADDRESS_PRIME"))
 	fmt.Print("sender key on prime = ")
@@ -109,9 +110,94 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 	fmt.Print("multisig key on vector = ")
 	fmt.Println(os.Getenv("BRIDGE_ADDRESS_KEY_VECTOR"))
 
-	assert.Equal(t, 1, 2)
-
 	for i := 0; i < clusterCnt; i++ {
 		assert.NoError(t, errors[i])
 	}
 }
+
+// func TestE2E_BridgingTransactions(t *testing.T) {
+// 	t.Parallel()
+// 	time.Sleep(time.Second * 245)
+
+// 	var baseLogsDir string = path.Join("../..", fmt.Sprintf("e2e-logs-result-%d", time.Now().Unix()), t.Name())
+// 	if err := cardanofw.CreateDirSafe(baseLogsDir, 0750); err != nil {
+// 		assert.NoError(t, err)
+// 		return
+// 	}
+// 	filename := fmt.Sprintf("%s/bridging_results.txt", baseLogsDir)
+// 	err := os.WriteFile(filename, []byte{}, 0644)
+// 	assert.NoError(t, err)
+
+// 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0644)
+// 	assert.NoError(t, err)
+
+// 	// PRIME -> VECTOR
+// 	// 1st STEP: (initiated by user)
+// 	// PRIME_SENDER -> PRIME_MULTISIG
+// 	// Define VECTOR_SENDER as a receiver of bridged funds
+// 	unsgignedTx, err := user.CreateBridgingTransaction(os.Getenv("SENDER_ADDRESS_PRIME"), "prime", map[string]uint{os.Getenv("SENDER_ADDRESS_VECTOR"): uint(1000000)})
+// 	if err != nil {
+// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
+// 		_, err = f.WriteString(res)
+// 		assert.NoError(t, err)
+// 	}
+
+// 	txHash, err := user.SignAndSubmitTransaction(unsgignedTx, os.Getenv("SENDER_KEY_PRIME"), "prime")
+// 	if err != nil {
+// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
+// 		_, err = f.WriteString(res)
+// 		assert.NoError(t, err)
+// 	}
+// 	res := fmt.Sprintf("Succesfully submited user tx to PRIME %s\n", txHash)
+// 	_, err = f.WriteString(res)
+// 	assert.NoError(t, err)
+
+// 	// 2nd STEP: (initiated by relayer)
+// 	// VECTOR_MULTISIG -> VECTOR_SENDER
+// 	txHash, err = batcher.BuildAndSubmitBatchingTx("vector", map[string]uint{os.Getenv("SENDER_ADDRESS_VECTOR"): uint(1000000)})
+// 	if err != nil {
+// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
+// 		_, err = f.WriteString(res)
+// 		assert.NoError(t, err)
+// 	}
+// 	res = fmt.Sprintf("Succesfully submited batching tx to VECTOR %s\n", txHash)
+// 	_, err = f.WriteString(res)
+// 	assert.NoError(t, err)
+
+// 	time.Sleep(time.Second * 2)
+
+// 	// VECTOR -> PRIME
+// 	// 1st STEP: (initiated by user)
+// 	// VECTOR_SENDER -> VECTOR_MULTISIG
+// 	// Define PRIME_SENDER as a receiver of bridged funds
+// 	unsgignedTx, err = user.CreateBridgingTransaction(os.Getenv("SENDER_ADDRESS_VECTOR"), "vector", map[string]uint{os.Getenv("SENDER_ADDRESS_PRIME"): uint(1000000)})
+// 	if err != nil {
+// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
+// 		_, err = f.WriteString(res)
+// 		assert.NoError(t, err)
+// 	}
+
+// 	txHash, err = user.SignAndSubmitTransaction(unsgignedTx, os.Getenv("SENDER_KEY_VECTOR"), "vector")
+// 	if err != nil {
+// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
+// 		_, err = f.WriteString(res)
+// 		assert.NoError(t, err)
+// 	}
+// 	res = fmt.Sprintf("Succesfully submited user tx to VECTOR %s\n", txHash)
+// 	_, err = f.WriteString(res)
+// 	assert.NoError(t, err)
+
+// 	// 2nd STEP: (initiated by relayer)
+// 	// PRIME_MULTISIG -> PRIME_SENDER
+// 	txHash, err = batcher.BuildAndSubmitBatchingTx("prime", map[string]uint{os.Getenv("SENDER_ADDRESS_PRIME"): uint(1000000)})
+// 	if err != nil {
+// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
+// 		_, err = f.WriteString(res)
+// 		assert.NoError(t, err)
+// 	}
+// 	res = fmt.Sprintf("Succesfully submited bridging tx to PRIME %s\n", txHash)
+// 	_, err = f.WriteString(res)
+// 	assert.NoError(t, err)
+
+// 	f.Close()
+// }

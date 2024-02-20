@@ -109,7 +109,8 @@ func (c *TestCardanoClusterConfig) GetStdout(name string, custom ...io.Writer) i
 
 func (c *TestCardanoClusterConfig) initLogsDir() error {
 	if c.LogsDir == "" {
-		logsDir := path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().Unix()), c.t.Name())
+		// logsDir := path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().Unix()), c.t.Name())
+		logsDir := path.Join("../..", "e2e-logs-cardano")
 		if err := CreateDirSafe(logsDir, 0750); err != nil {
 			return err
 		}
@@ -489,7 +490,7 @@ func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
 			"--out-file", utxoaddress,
 			"--testnet-magic", strconv.Itoa(net_prefix),
 		}
-		stdOut := c.Config.GetStdout("env-variables", &b)
+		stdOut := c.Config.GetStdout("env-variables-1", &b)
 
 		err := c.runCommand(c.Config.Binary, args, stdOut)
 		if err != nil {
@@ -505,7 +506,7 @@ func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
 	args := []string{
 		utxo1address,
 	}
-	stdOut := c.Config.GetStdout("env-variables", &b)
+	stdOut := c.Config.GetStdout("env-variables-2", &b)
 	err := c.runCommand("cat", args, stdOut)
 	if err != nil {
 		return err
@@ -519,7 +520,7 @@ func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
 		"-c",
 		fmt.Sprintf("cat %s | jq -r .cborHex | cut -c 5-", utxo1skey),
 	}
-	stdOut = c.Config.GetStdout("env-variables", &b)
+	stdOut = c.Config.GetStdout("env-variables-3", &b)
 	err = c.runCommand("bash", args, stdOut)
 	if err != nil {
 		return err
@@ -540,7 +541,7 @@ func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
 	args = []string{
 		utxo3address,
 	}
-	stdOut = c.Config.GetStdout("env-variables", &b)
+	stdOut = c.Config.GetStdout("env-variables-4", &b)
 	err = c.runCommand("cat", args, stdOut)
 	if err != nil {
 		return err
@@ -556,7 +557,7 @@ func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
 		"-c",
 		fmt.Sprintf("cat %s | jq -r .cborHex | cut -c 5-", utxo3skey),
 	}
-	stdOut = c.Config.GetStdout("env-variables", &b)
+	stdOut = c.Config.GetStdout("env-variables-5", &b)
 	err = c.runCommand("bash", args, stdOut)
 	if err != nil {
 		return err
@@ -569,6 +570,10 @@ func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
 
 // runCommand executes command with given arguments
 func (c *TestCardanoCluster) runCommand(binary string, args []string, stdout io.Writer, envVariables ...string) error {
+	return RunCommand(binary, args, stdout, envVariables...)
+}
+
+func RunCommand(binary string, args []string, stdout io.Writer, envVariables ...string) error {
 	var stdErr bytes.Buffer
 
 	cmd := exec.Command(binary, args...)

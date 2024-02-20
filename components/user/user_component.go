@@ -90,7 +90,11 @@ func CreateBridgingTransaction(sender string, chainId string, receiversAndAmount
 	// Add outputs to the transaction
 	// Fill metadata values
 	builder.Tx().AuxiliaryData = tx.NewAuxiliaryData()
-	builder.Tx().AuxiliaryData.AddMetadataElement("chainId", chainId)
+	if chainId == "prime" {
+		builder.Tx().AuxiliaryData.AddMetadataElement("chainId", "vector")
+	} else {
+		builder.Tx().AuxiliaryData.AddMetadataElement("chainId", "prime")
+	}
 
 	for addressString, amount := range receiversAndAmounts {
 		builder.Tx().AuxiliaryData.AddMetadataTransaction(addressString, amount)
