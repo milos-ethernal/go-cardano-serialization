@@ -2,17 +2,12 @@ package address_test
 
 import (
 	"errors"
-	"flag"
 	"reflect"
 	"testing"
 
-	"github.com/fivebinaries/go-cardano-serialization/address"
-	"github.com/fivebinaries/go-cardano-serialization/network"
+	"github.com/milos-ethernal/go-cardano-serialization/address"
+	"github.com/milos-ethernal/go-cardano-serialization/network"
 	"github.com/stretchr/testify/assert"
-)
-
-var (
-	generate = flag.Bool("gen", false, "generate .golden files")
 )
 
 func TestAddressInit(t *testing.T) {

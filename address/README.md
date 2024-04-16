@@ -1,13 +1,13 @@
 # Address
 
-[![GoDoc](https://godoc.org/github.com/fivebinaries/go-cardano-serialization/address?status.svg)](https://godoc.org/github.com/fivebinaries/go-cardano-serialization/address)
+[![GoDoc](https://godoc.org/github.com/milos-ethernal/go-cardano-serialization/address?status.svg)](https://godoc.org/github.com/milos-ethernal/go-cardano-serialization/address)
 
 Package address implements structs for Cardano address types. 
 
 ## Installation
 
 ```bash
-go get github.com/fivebinaries/go-cardano-serialization/address
+go get github.com/milos-ethernal/go-cardano-serialization/address
 ```
 
 ## Overview 

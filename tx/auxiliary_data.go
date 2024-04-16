@@ -3,7 +3,7 @@ package tx
 import (
 	"reflect"
 
-	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
+	"github.com/milos-ethernal/go-cardano-serialization/internal/bech32/cbor"
 )
 
 type MetadataElement interface{}

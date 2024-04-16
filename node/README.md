@@ -1,5 +1,5 @@
 # Node
-[![GoDoc](https://godoc.org/github.com/fivebinaries/go-cardano-serialization/node?status.svg)](https://godoc.org/github.com/fivebinaries/go-cardano-serialization/node)
+[![GoDoc](https://godoc.org/github.com/milos-ethernal/go-cardano-serialization/node?status.svg)](https://godoc.org/github.com/milos-ethernal/go-cardano-serialization/node)
 
 
 Package node provides an interface for cardano backends/nodes. Node implements two backends; blockfrost API and cardano-cli.
@@ -7,7 +7,7 @@ Package node provides an interface for cardano backends/nodes. Node implements t
 ## Installation
 
 ```bash
-go get github.com/fivebinaries/go-cardano-serialization/node
+go get github.com/milos-ethernal/go-cardano-serialization/node
 ```
 
 ## Usage
@@ -20,7 +20,7 @@ package main
 import (
     "fmt"
     "log"
-    "github.com/fivebinaries/go-cardano-serialization/node"
+    "github.com/milos-ethernal/go-cardano-serialization/node"
 )
 
 func prettyPrint(v interface{}) string {
@@ -55,4 +55,4 @@ More examples on node usage can be found in the [`examples`](../examples/node/)
 
 ## License
 
-Licensed under the [Apache License 2.0](https://opensource.org/licenses/Apache-2.0), see [`LICENSE`](https://github.com/fivebinaries/go-cardano-serialization/blob/master/LICENSE)
+Licensed under the [Apache License 2.0](https://opensource.org/licenses/Apache-2.0), see [`LICENSE`](https://github.com/milos-ethernal/go-cardano-serialization/blob/master/LICENSE)

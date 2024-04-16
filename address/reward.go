@@ -1,9 +1,9 @@
 package address
 
 import (
-	"github.com/fivebinaries/go-cardano-serialization/internal/bech32"
-	"github.com/fivebinaries/go-cardano-serialization/network"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/milos-ethernal/go-cardano-serialization/internal/bech32"
+	"github.com/milos-ethernal/go-cardano-serialization/network"
 )
 
 // RewardAddress contains content of the reward/staking address.

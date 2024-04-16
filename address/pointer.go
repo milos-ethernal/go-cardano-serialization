@@ -5,8 +5,8 @@ import (
 	"reflect"
 
 	"github.com/btcsuite/btcutil/bech32"
-	"github.com/fivebinaries/go-cardano-serialization/network"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/milos-ethernal/go-cardano-serialization/network"
 )
 
 type StakePointer struct {

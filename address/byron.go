@@ -5,8 +5,8 @@ import (
 	"hash/crc32"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/fivebinaries/go-cardano-serialization/network"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/milos-ethernal/go-cardano-serialization/network"
 )
 
 var (
@@ -104,7 +104,7 @@ func (b *ByronAddress) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-//Pref returns the string prefix for the base address. "" for byron address since it has no prefix.
+// Pref returns the string prefix for the base address. "" for byron address since it has no prefix.
 func (b *ByronAddress) Prefix() string {
 	return ""
 }

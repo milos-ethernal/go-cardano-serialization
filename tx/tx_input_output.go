@@ -3,8 +3,8 @@ package tx
 import (
 	"encoding/hex"
 
-	"github.com/fivebinaries/go-cardano-serialization/address"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/milos-ethernal/go-cardano-serialization/address"
 )
 
 type TxInput struct {

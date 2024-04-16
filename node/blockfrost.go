@@ -10,10 +10,10 @@ import (
 	"strconv"
 
 	"github.com/blockfrost/blockfrost-go"
-	"github.com/fivebinaries/go-cardano-serialization/address"
-	"github.com/fivebinaries/go-cardano-serialization/network"
-	"github.com/fivebinaries/go-cardano-serialization/protocol"
-	"github.com/fivebinaries/go-cardano-serialization/tx"
+	"github.com/milos-ethernal/go-cardano-serialization/address"
+	"github.com/milos-ethernal/go-cardano-serialization/network"
+	"github.com/milos-ethernal/go-cardano-serialization/protocol"
+	"github.com/milos-ethernal/go-cardano-serialization/tx"
 )
 
 type blockfrostNode struct {

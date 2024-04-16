@@ -1,19 +1,19 @@
 <p align="center">
-  <a href="https://fivebinaries.com" target="_blank" align="center">
-    <img src="https://raw.githubusercontent.com/fivebinaries/go-cardano-serialization/dev/.github/go-cardano-serialization-logo.svg" width="100">
+  <a href="https://ethernal.tech" target="_blank" align="center">
+    <img src="https://raw.githubusercontent.com/milos-ethernal/go-cardano-serialization/dev/.github/go-cardano-serialization-logo.svg" width="100">
   </a>
   <br />
 </p>
 
 # Go Cardano Serialization Library
-[![GoDoc](https://godoc.org/github.com/fivebinaries/go-cardano-serialization?status.svg)](https://godoc.org/github.com/fivebinaries/go-cardano-serialization)
+[![GoDoc](https://godoc.org/github.com/milos-ethernal/go-cardano-serialization?status.svg)](https://godoc.org/github.com/milos-ethernal/go-cardano-serialization)
 
-Golang library for serialization and deserialiation of Cardano data structures. 
+This is the fork of Golang library for serialization and deserialiation of Cardano data structures. 
 
 ## Installation
 
 ```bash
-go get github.com/fivebinaries/go-cardano-serialization
+go get github.com/milos-ethernal/go-cardano-serialization
 ```
 
 ## Usage
@@ -27,8 +27,8 @@ package main
 import (
     "log"
 
-    "github.com/fivebinaries/go-cardano-serialization/address"
-    "github.com/fivebinaries/go-cardano-serialization/tx"
+    "github.com/milos-ethernal/go-cardano-serialization/address"
+    "github.com/milos-ethernal/go-cardano-serialization/tx"
 )
 
 func main() {
@@ -68,4 +68,4 @@ More examples covering building through signing and submission of transactions c
 
 ## License
 
-Licensed under the [Apache License 2.0](https://opensource.org/licenses/Apache-2.0), see [`LICENSE`](https://github.com/fivebinaries/go-cardano-serialization/blob/master/LICENSE)
+Licensed under the [Apache License 2.0](https://opensource.org/licenses/Apache-2.0), see [`LICENSE`](https://github.com/milos-ethernal/go-cardano-serialization/blob/master/LICENSE)

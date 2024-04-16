@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/fivebinaries/go-cardano-serialization/fees"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/milos-ethernal/go-cardano-serialization/fees"
 	"golang.org/x/crypto/blake2b"
 )
 

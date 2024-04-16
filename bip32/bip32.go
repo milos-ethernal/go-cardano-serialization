@@ -7,8 +7,8 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/fivebinaries/go-cardano-serialization/crypto"
-	"github.com/fivebinaries/go-cardano-serialization/crypto/edwards25519"
+	"github.com/milos-ethernal/go-cardano-serialization/crypto"
+	"github.com/milos-ethernal/go-cardano-serialization/crypto/edwards25519"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -153,8 +153,8 @@ func (pub XPub) ChainCode() PrivateKey {
 	return PrivateKey(pub[32:])
 }
 
-//implements https://github.com/Emurgo/cardano-serialization-lib/blob/0e89deadf9183a129b9a25c0568eed177d6c6d7c/rust/src/chain_crypto/derive.rs#L30
-//implements https://github.com/Emurgo/cardano-serialization-lib/blob/0e89deadf9183a129b9a25c0568eed177d6c6d7c/rust/src/crypto.rs#L123
+// implements https://github.com/Emurgo/cardano-serialization-lib/blob/0e89deadf9183a129b9a25c0568eed177d6c6d7c/rust/src/chain_crypto/derive.rs#L30
+// implements https://github.com/Emurgo/cardano-serialization-lib/blob/0e89deadf9183a129b9a25c0568eed177d6c6d7c/rust/src/crypto.rs#L123
 func FromBip39Entropy(entropy []byte, password []byte) XPrv {
 	const Iter = 4096
 	pbkdf2_result := pbkdf2.Key(password, entropy, Iter, XPrv_Size, sha512.New)

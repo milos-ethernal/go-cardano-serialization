@@ -1,10 +1,10 @@
 package tx
 
 import (
-	"github.com/fivebinaries/go-cardano-serialization/address"
-	"github.com/fivebinaries/go-cardano-serialization/bip32"
-	"github.com/fivebinaries/go-cardano-serialization/fees"
-	"github.com/fivebinaries/go-cardano-serialization/protocol"
+	"github.com/milos-ethernal/go-cardano-serialization/address"
+	"github.com/milos-ethernal/go-cardano-serialization/bip32"
+	"github.com/milos-ethernal/go-cardano-serialization/fees"
+	"github.com/milos-ethernal/go-cardano-serialization/protocol"
 )
 
 // TxBuilder - used to create, validate and sign transactions.

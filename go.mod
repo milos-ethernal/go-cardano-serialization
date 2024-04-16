@@ -1,8 +1,8 @@
-module github.com/fivebinaries/go-cardano-serialization
+module github.com/milos-ethernal/go-cardano-serialization
 
 go 1.20
 
-replace github.com/fivebinaries/go-cardano-serialization => ./
+replace github.com/milos-ethernal/go-cardano-serialization => ./
 
 require (
 	github.com/blockfrost/blockfrost-go v0.1.1

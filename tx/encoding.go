@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
+	"github.com/milos-ethernal/go-cardano-serialization/internal/bech32/cbor"
 )
 
 var cborEnc, _ = cbor.CanonicalEncOptions().EncMode()

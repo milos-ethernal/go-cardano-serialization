@@ -15,9 +15,9 @@ import (
 	"log"
 	"strings"
 
-	"github.com/fivebinaries/go-cardano-serialization/address"
-	"github.com/fivebinaries/go-cardano-serialization/bip32"
-	"github.com/fivebinaries/go-cardano-serialization/network"
+	"github.com/milos-ethernal/go-cardano-serialization/address"
+	"github.com/milos-ethernal/go-cardano-serialization/bip32"
+	"github.com/milos-ethernal/go-cardano-serialization/network"
 	"github.com/tyler-smith/go-bip39"
 )
 

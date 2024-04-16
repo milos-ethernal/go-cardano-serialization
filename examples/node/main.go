@@ -16,9 +16,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/fivebinaries/go-cardano-serialization/address"
-	"github.com/fivebinaries/go-cardano-serialization/network"
-	"github.com/fivebinaries/go-cardano-serialization/node"
+	"github.com/milos-ethernal/go-cardano-serialization/address"
+	"github.com/milos-ethernal/go-cardano-serialization/network"
+	"github.com/milos-ethernal/go-cardano-serialization/node"
 )
 
 func prettyPrint(v interface{}) string {

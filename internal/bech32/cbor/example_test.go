@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/fivebinaries/go-cardano-serialization/internal/bech32/cbor"
+	"github.com/milos-ethernal/go-cardano-serialization/internal/bech32/cbor"
 )
 
 func ExampleMarshal() {
