@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"strings"
 	"sync"
@@ -46,9 +45,9 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 			cluster, err := cardanofw.NewCardanoTestCluster(t,
 				cardanofw.WithNodesCount(3),
 				cardanofw.WithStartTimeDelay(time.Second*5),
-				cardanofw.WithPort(3210+id*100),
+				cardanofw.WithPort(10000*(id+1)+3001),
 				cardanofw.WithLogsDir(logsDir),
-				cardanofw.WithNetworkMagic(42+id))
+				cardanofw.WithNetworkMagic(42+(id+1)*100))
 			if err != nil {
 				errors[id] = err
 
@@ -77,7 +76,7 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 			}
 
 			// Blocks WaitForBlockWithState from stoping when desired number of blocks is reached
-			if errors[id] = cluster.StartOgmiosOnNode(uint((id+1)*1000 + 300)); errors[id] != nil {
+			if errors[id] = cluster.StartOgmiosOnNode(uint((id+1)*10000 + 3001)); errors[id] != nil {
 				return
 			}
 
@@ -86,29 +85,6 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 	}
 
 	wg.Wait()
-
-	fmt.Print("sender address on prime = ")
-	fmt.Println(os.Getenv("SENDER_ADDRESS_PRIME"))
-	fmt.Print("sender key on prime = ")
-	fmt.Println(os.Getenv("SENDER_KEY_PRIME"))
-	fmt.Print("multisig address on prime = ")
-	fmt.Println(os.Getenv("MULTISIG_ADDRESS_PRIME"))
-	fmt.Println(os.Getenv("MULTISIG_FEE_ADDRESS_PRIME"))
-	fmt.Println(os.Getenv("BRIDGE_ADDRESS_PRIME"))
-	fmt.Print("multisig key on prime = ")
-	fmt.Println(os.Getenv("BRIDGE_ADDRESS_KEY_PRIME"))
-
-	fmt.Println()
-	fmt.Print("sender address on vector = ")
-	fmt.Println(os.Getenv("SENDER_ADDRESS_VECTOR"))
-	fmt.Print("sender key on vector = ")
-	fmt.Println(os.Getenv("SENDER_KEY_VECTOR"))
-	fmt.Print("multisig address on vector = ")
-	fmt.Println(os.Getenv("MULTISIG_ADDRESS_VECTOR"))
-	fmt.Println(os.Getenv("MULTISIG_FEE_ADDRESS_VECTOR"))
-	fmt.Println(os.Getenv("BRIDGE_ADDRESS_VECTOR"))
-	fmt.Print("multisig key on vector = ")
-	fmt.Println(os.Getenv("BRIDGE_ADDRESS_KEY_VECTOR"))
 
 	for i := 0; i < clusterCnt; i++ {
 		assert.NoError(t, errors[i])
@@ -135,32 +111,73 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 // 	// 1st STEP: (initiated by user)
 // 	// PRIME_SENDER -> PRIME_MULTISIG
 // 	// Define VECTOR_SENDER as a receiver of bridged funds
-// 	unsgignedTx, err := user.CreateBridgingTransaction(os.Getenv("SENDER_ADDRESS_PRIME"), "prime", map[string]uint{os.Getenv("SENDER_ADDRESS_VECTOR"): uint(1000000)})
-// 	if err != nil {
-// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
-// 		_, err = f.WriteString(res)
-// 		assert.NoError(t, err)
+// 	type RequestBody1 struct {
+// 		PrivKey       string `json:"priv_key"`
+// 		SenderAddress string `json:"sender_address"`
+// 		RecvAddress   string `json:"recv_address"`
+// 		Amount        int    `json:"amount"`
+// 		ChainID       string `json:"chainId"`
 // 	}
 
-// 	txHash, err := user.SignAndSubmitTransaction(unsgignedTx, os.Getenv("SENDER_KEY_PRIME"), "prime")
-// 	if err != nil {
-// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
-// 		_, err = f.WriteString(res)
-// 		assert.NoError(t, err)
+// 	// Create the request body
+// 	requestBody1 := RequestBody1{
+// 		PrivKey:       os.Getenv("SENDER_KEY_PRIME"),
+// 		SenderAddress: os.Getenv("SENDER_ADDRESS_PRIME"),
+// 		RecvAddress:   os.Getenv("SENDER_ADDRESS_VECTOR"),
+// 		Amount:        1000000,
+// 		ChainID:       "prime",
 // 	}
-// 	res := fmt.Sprintf("Succesfully submited user tx to PRIME %s\n", txHash)
+
+// 	_, err = f.WriteString(fmt.Sprintf("%s\n", os.Getenv("SENDER_KEY_PRIME")))
+// 	assert.NoError(t, err)
+// 	_, err = f.WriteString(fmt.Sprintf("%s\n", os.Getenv("SENDER_ADDRESS_PRIME")))
+// 	assert.NoError(t, err)
+
+// 	// Marshal the request body to JSON
+// 	requestBodyBytes, err := json.Marshal(requestBody1)
+// 	assert.NoError(t, err)
+
+// 	// Send HTTP POST request
+// 	resp, err := http.Post("http://localhost:8000/api/createAndSignBridgingTx", "application/json", bytes.NewBuffer(requestBodyBytes))
+// 	assert.NoError(t, err)
+// 	defer resp.Body.Close()
+
+// 	// Read the response body
+// 	body, err := io.ReadAll(resp.Body)
+// 	assert.NoError(t, err)
+
+// 	res := fmt.Sprintf("Succesfully submited user tx to PRIME %s\n", string(body))
 // 	_, err = f.WriteString(res)
 // 	assert.NoError(t, err)
 
 // 	// 2nd STEP: (initiated by relayer)
 // 	// VECTOR_MULTISIG -> VECTOR_SENDER
-// 	txHash, err = batcher.BuildAndSubmitBatchingTx("vector", map[string]uint{os.Getenv("SENDER_ADDRESS_VECTOR"): uint(1000000)})
-// 	if err != nil {
-// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
-// 		_, err = f.WriteString(res)
-// 		assert.NoError(t, err)
+// 	type RequestBody2 struct {
+// 		ChainID  string `json:"chainId"`
+// 		RecvAddr string `json:"recv_addr"`
+// 		Amount   int    `json:"amount"`
 // 	}
-// 	res = fmt.Sprintf("Succesfully submited batching tx to VECTOR %s\n", txHash)
+
+// 	// Create the request body
+// 	requestBody2 := RequestBody2{
+// 		ChainID:  "vector",
+// 		RecvAddr: os.Getenv("SENDER_ADDRESS_VECTOR"),
+// 		Amount:   1000000,
+// 	}
+
+// 	// Marshal the request body to JSON
+// 	requestBodyBytes, err = json.Marshal(requestBody2)
+// 	assert.NoError(t, err)
+
+// 	// Send HTTP POST request
+// 	resp, err = http.Post("http://localhost:8000/api/createAndSignBatchingTx", "application/json", bytes.NewBuffer(requestBodyBytes))
+// 	assert.NoError(t, err)
+// 	defer resp.Body.Close()
+
+// 	// Read the response body
+// 	body, err = io.ReadAll(resp.Body)
+// 	assert.NoError(t, err)
+// 	res = fmt.Sprintf("Succesfully submited batching tx to VECTOR %s\n", string(body))
 // 	_, err = f.WriteString(res)
 // 	assert.NoError(t, err)
 
@@ -170,32 +187,55 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 // 	// 1st STEP: (initiated by user)
 // 	// VECTOR_SENDER -> VECTOR_MULTISIG
 // 	// Define PRIME_SENDER as a receiver of bridged funds
-// 	unsgignedTx, err = user.CreateBridgingTransaction(os.Getenv("SENDER_ADDRESS_VECTOR"), "vector", map[string]uint{os.Getenv("SENDER_ADDRESS_PRIME"): uint(1000000)})
-// 	if err != nil {
-// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
-// 		_, err = f.WriteString(res)
-// 		assert.NoError(t, err)
+
+// 	// Create the request body
+// 	requestBody1 = RequestBody1{
+// 		PrivKey:       os.Getenv("SENDER_KEY_VECTOR"),
+// 		SenderAddress: os.Getenv("SENDER_ADDRESS_VECTOR"),
+// 		RecvAddress:   os.Getenv("SENDER_ADDRESS_PRIME"),
+// 		Amount:        1000000,
+// 		ChainID:       "vector",
 // 	}
 
-// 	txHash, err = user.SignAndSubmitTransaction(unsgignedTx, os.Getenv("SENDER_KEY_VECTOR"), "vector")
-// 	if err != nil {
-// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
-// 		_, err = f.WriteString(res)
-// 		assert.NoError(t, err)
-// 	}
-// 	res = fmt.Sprintf("Succesfully submited user tx to VECTOR %s\n", txHash)
+// 	// Marshal the request body to JSON
+// 	requestBodyBytes, err = json.Marshal(requestBody1)
+// 	assert.NoError(t, err)
+
+// 	// Send HTTP POST request
+// 	resp, err = http.Post("http://localhost:8000/api/createAndSignBridgingTx", "application/json", bytes.NewBuffer(requestBodyBytes))
+// 	assert.NoError(t, err)
+// 	defer resp.Body.Close()
+
+// 	// Read the response body
+// 	body, err = io.ReadAll(resp.Body)
+// 	assert.NoError(t, err)
+// 	res = fmt.Sprintf("Succesfully submited user tx to VECTOR %s\n", string(body))
 // 	_, err = f.WriteString(res)
 // 	assert.NoError(t, err)
 
 // 	// 2nd STEP: (initiated by relayer)
 // 	// PRIME_MULTISIG -> PRIME_SENDER
-// 	txHash, err = batcher.BuildAndSubmitBatchingTx("prime", map[string]uint{os.Getenv("SENDER_ADDRESS_PRIME"): uint(1000000)})
-// 	if err != nil {
-// 		res := fmt.Sprintf("ERROR %s\n", err.Error())
-// 		_, err = f.WriteString(res)
-// 		assert.NoError(t, err)
+// 	// Create the request body
+// 	requestBody2 = RequestBody2{
+// 		ChainID:  "prime",
+// 		RecvAddr: os.Getenv("SENDER_ADDRESS_PRIME"),
+// 		Amount:   1000000,
 // 	}
-// 	res = fmt.Sprintf("Succesfully submited bridging tx to PRIME %s\n", txHash)
+
+// 	// Marshal the request body to JSON
+// 	requestBodyBytes, err = json.Marshal(requestBody2)
+// 	assert.NoError(t, err)
+
+// 	// Send HTTP POST request
+// 	resp, err = http.Post("http://localhost:8000/api/createAndSignBatchingTx", "application/json", bytes.NewBuffer(requestBodyBytes))
+// 	assert.NoError(t, err)
+// 	defer resp.Body.Close()
+
+// 	// Read the response body
+// 	body, err = io.ReadAll(resp.Body)
+// 	assert.NoError(t, err)
+
+// 	res = fmt.Sprintf("Succesfully submited bridging tx to PRIME %s\n", string(body))
 // 	_, err = f.WriteString(res)
 // 	assert.NoError(t, err)
 

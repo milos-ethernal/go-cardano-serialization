@@ -518,7 +518,7 @@ func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
 
 	args = []string{
 		"-c",
-		fmt.Sprintf("cat %s | jq -r .cborHex | cut -c 5-", utxo1skey),
+		fmt.Sprintf("cat %s | jq -r .cborHex | cut -c 5- | bech32 \"ed25519_sk\"", utxo1skey),
 	}
 	stdOut = c.Config.GetStdout("env-variables-3", &b)
 	err = c.runCommand("bash", args, stdOut)
@@ -555,7 +555,7 @@ func (c *TestCardanoCluster) SetEnvVariables(chainId string) error {
 
 	args = []string{
 		"-c",
-		fmt.Sprintf("cat %s | jq -r .cborHex | cut -c 5-", utxo3skey),
+		fmt.Sprintf("cat %s | jq -r .cborHex | cut -c 5- | bech32 \"ed25519_sk\"", utxo3skey),
 	}
 	stdOut = c.Config.GetStdout("env-variables-5", &b)
 	err = c.runCommand("bash", args, stdOut)
