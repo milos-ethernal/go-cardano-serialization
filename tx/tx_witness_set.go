@@ -1,5 +1,10 @@
 package tx
 
+import (
+	"crypto/ed25519"
+	"fmt"
+)
+
 type WitnessSet struct {
 	Witnesses []VKeyWitness  `cbor:"0,keyasint,omitempty"`
 	Scripts   []NativeScript `cbor:"1,keyasint,omitempty"`
@@ -34,4 +39,26 @@ type BootstrapWitness struct {
 	Signature  []byte
 	ChainCode  []byte
 	Attributes []byte
+}
+
+// GetVerificationKeyFromSigningKey retrieves verification/public key from signing/private key
+func GetVerificationKeyFromSigningKey(signingKey []byte) []byte {
+	return ed25519.NewKeyFromSeed(signingKey).Public().(ed25519.PublicKey)
+}
+
+func SignMessage(signingKey, verificationKey, message []byte) (result []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("error: %v", r)
+		}
+	}()
+
+	privateKey := make([]byte, len(signingKey)+len(verificationKey))
+
+	copy(privateKey, signingKey)
+	copy(privateKey[32:], verificationKey)
+
+	result = ed25519.Sign(privateKey, message)
+
+	return
 }
